@@ -6,18 +6,38 @@ Demonstrates real-time ingestion of mock IoT data (weather, sales, logistics, in
 
 ---
 
+## Pre-requirements (5 minutes)
+
+### 1. install uv
+```bash
+
+```
+### 2. install python venv
+```bash
+uv venv --python 3.12 .venv 
+source .venv/bin/activate  
+
+```
+
+### 2. install python venv
+```bash
+uv sync
+```
+
+
+---
+
 ## Quick Start (5 minutes)
 
 ### 1. Start Docker Services
 ```bash
-cd /home/sirius/TUTORIALS/Spark_Kafka_Docker
+cd Spark_Kafka_Docker
 bash scripts/start.sh
 ```
 
 ### 2. Start Data Generators (new terminal)
 ```bash
 cd data-generators
-pip install -r requirements.txt
 python3 main.py
 ```
 
@@ -33,7 +53,8 @@ docker exec postgres psql -U postgres -d iot_database -c \
   "SELECT COUNT(*) FROM iot.weather_data;"
 
 # Open dashboards
-# EMQX: http://localhost:18083
+# Kafka UI: http://localhost:8888 (topics, messages, partitions)
+# EMQX: http://localhost:18083 (admin/public)
 # Spark Master: http://localhost:8080
 ```
 
@@ -65,7 +86,7 @@ PostgreSQL (5 tables, fully indexed)
 
 ```
 iot-pipeline-demo/
-├── docker-compose.yml              # All 7 services orchestrated
+├── docker-compose.yml              # All 8 services orchestrated
 ├── .env                            # Configuration (passwords, ports)
 ├── scripts/
 │   ├── start.sh                    # Full startup with health checks
@@ -180,14 +201,15 @@ docker compose down && rm -rf ./data/*
 | Service | Memory | CPU | Purpose |
 |---------|--------|-----|---------|
 | EMQX | 2 GB | 0.5 | MQTT broker + Kafka bridge |
-| Kafka | 2 GB | 1.0 | Single broker, 10 topics |
+| Kafka | 2 GB | 1.0 | Single broker, 5 topics |
+| Kafka UI | 512 MB | 0.5 | Kafka visualization & monitoring |
 | Spark Master | 512 MB | 0.5 | Coordination |
 | Spark Worker 1 | 1.5 GB | 1.0 | Task execution |
 | Spark Worker 2 | 1.5 GB | 1.0 | Task execution |
 | PostgreSQL | 512 MB | 0.5 | Data warehouse |
 | Zookeeper | 1 GB | 0.5 | Kafka coordination |
 | System | ~1 GB | — | OS overhead |
-| **Total** | **~11 GB** | **~5.0 CPU** | **12GB Recommended** |
+| **Total** | **~11.5 GB** | **~5.5 CPU** | **12GB Recommended** |
 
 ---
 

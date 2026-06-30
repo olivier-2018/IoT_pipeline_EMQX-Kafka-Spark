@@ -21,7 +21,7 @@ python3 --version         # e.g., Python 3.10.12
 
 ### Step 1: Start All Services (2 min)
 ```bash
-cd /home/sirius/TUTORIALS/Spark_Kafka_Docker
+cd Spark_Kafka_Docker
 
 # Start Docker containers
 bash scripts/start.sh
@@ -38,7 +38,7 @@ Step 4: Running health checks...
 ```
 
 **What just happened:**
-- All 7 Docker containers started (EMQX, Kafka, Zookeeper, Spark master, 2 workers, PostgreSQL)
+- All 8 Docker containers started (EMQX, Kafka, Zookeeper, Kafka UI, Spark master, 2 workers, PostgreSQL)
 - Kafka topics created with proper partitioning
 - PostgreSQL schema initialized with 5 tables
 
@@ -85,7 +85,7 @@ Connecting All Generators...
 ### Step 5: Submit Spark Jobs (in another terminal)
 ```bash
 # Go to project root
-cd /home/sirius/TUTORIALS/Spark_Kafka_Docker
+cd Spark_Kafka_Docker
 
 # Submit all Spark jobs
 bash scripts/submit-spark-jobs.sh
@@ -146,6 +146,7 @@ done
 
 | Service | URL | Login |
 |---------|-----|-------|
+| Kafka UI | http://localhost:8888 | (none) |
 | EMQX | http://localhost:18083 | admin / public |
 | Spark Master | http://localhost:8080 | (none) |
 | Spark Worker 1 | http://localhost:8081 | (none) |
@@ -214,11 +215,11 @@ docker exec kafka kafka-topics --bootstrap-server kafka:9092 --list
 
 # Describe a topic
 docker exec kafka kafka-topics --bootstrap-server kafka:9092 \
-  --describe --topic iot.weather.data
+  --describe --topic iot-weather-data
 
 # Consume messages
 docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 \
-  --topic iot.weather.data --from-beginning --max-messages 5
+  --topic iot-weather-data --from-beginning --max-messages 5
 ```
 
 ### Test PostgreSQL Connection
@@ -263,7 +264,7 @@ bash scripts/reset.sh
 ### No Data in PostgreSQL
 1. Check data generators are running: `ps aux | grep python`
 2. Check MQTT messages reach EMQX: `docker exec emqx mosquitto_sub -h localhost -t "devices/+/+"`
-3. Check Kafka has messages: `docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 --topic iot.weather.data --max-messages 5`
+3. Check Kafka has messages: `docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 --topic iot-weather-data --max-messages 5`
 4. Check Spark jobs are running: http://localhost:8080
 5. Check Spark logs: `docker logs spark-master`
 

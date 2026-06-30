@@ -1,9 +1,6 @@
 -- PostgreSQL Schema Initialization for IoT Data Pipeline
 -- Automatically run on first container startup
 
--- Enable necessary extensions
-CREATE EXTENSION IF NOT EXISTS uuid_ossp;
-
 -- Create schema
 CREATE SCHEMA IF NOT EXISTS iot;
 SET search_path TO iot;

@@ -20,7 +20,7 @@ spark-worker-1:
 ```bash
 # Reduce from 1 day to 12 hours
 docker exec kafka kafka-topics --bootstrap-server kafka:9092 \
-  --alter --topic iot.weather.data \
+  --alter --topic iot-weather-data \
   --config retention.ms=43200000
 ```
 
@@ -54,7 +54,7 @@ Already enabled (GZIP), but can tune:
 ```bash
 # Use more aggressive compression (slower but smaller)
 docker exec kafka kafka-topics --bootstrap-server kafka:9092 \
-  --alter --topic iot.weather.data \
+  --alter --topic iot-weather-data \
   --config compression.type=snappy  # or lz4
 ```
 
@@ -164,7 +164,7 @@ SELECT COUNT(*) FROM iot.weather_data;  -- Returns 0 after 5 minutes
    
 3. Are Kafka topics receiving messages?
    docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 \
-     --topic iot.weather.data --max-messages 1
+     --topic iot-weather-data --max-messages 1
    
 4. Are Spark jobs running?
    docker logs spark-master | grep "WeatherDataIngestion"
@@ -214,7 +214,7 @@ batch_df.write \
 **Symptoms**:
 ```bash
 docker exec kafka kafka-topics --bootstrap-server kafka:9092 --list
-# (empty or missing iot.* topics)
+# (empty or missing iot-* topics)
 ```
 
 **Solution**:
@@ -224,7 +224,7 @@ bash scripts/init-kafka-topics.sh
 
 # Or create manually
 docker exec kafka kafka-topics --bootstrap-server kafka:9092 \
-  --create --if-not-exists --topic iot.weather.data \
+  --create --if-not-exists --topic iot-weather-data \
   --partitions 2 --replication-factor 1
 ```
 
@@ -391,7 +391,7 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 **Increase Kafka Partitions**:
 ```bash
 docker exec kafka kafka-topics --bootstrap-server kafka:9092 \
-  --alter --topic iot.weather.data --partitions 4
+  --alter --topic iot-weather-data --partitions 4
 ```
 
 **Increase PostgreSQL Connections**:
@@ -416,7 +416,7 @@ postgres:
 ```bash
 # 6 hours instead of 1 day
 docker exec kafka kafka-topics --bootstrap-server kafka:9092 \
-  --alter --topic iot.weather.data \
+  --alter --topic iot-weather-data \
   --config retention.ms=21600000
 ```
 

@@ -34,7 +34,7 @@ This is a minimalist end-to-end IoT data pipeline designed to run on a **12GB la
 ├──────────────────────────────────────────────────────────────────┤
 │ EMQX (MQTT Broker)                                               │
 │  • Receives: devices/{device_type}/{attribute}                   │
-│  • Forwards: via Kafka bridge → iot.{device_type}.data           │
+│  • Forwards: via Kafka bridge → iot-{device_type}-data           │
 │  • Port: 1883 (MQTT), 18083 (Dashboard)                          │
 │  • Memory: 2GB                                                   │
 └──────────────────────────────────────────────────────────────────┘
@@ -46,11 +46,11 @@ This is a minimalist end-to-end IoT data pipeline designed to run on a **12GB la
 ├──────────────────────────────────────────────────────────────────┤
 │ Kafka (Single Broker)                                            │
 │  Topics (2 partitions each, 10 total):                           │
-│    • iot.weather.data          (2 partitions)                    │
-│    • iot.orders.events         (2 partitions)                    │
-│    • iot.logistics.dispatch    (2 partitions)                    │
-│    • iot.inventory.changes     (2 partitions)                    │
-│    • iot.users.activity        (2 partitions)                    │
+│    • iot-weather-data          (2 partitions)                    │
+│    • iot-orders-events         (2 partitions)                    │
+│    • iot-logistics-dispatch    (2 partitions)                    │
+│    • iot-inventory-changes     (2 partitions)                    │
+│    • iot-users-activity        (2 partitions)                    │
 │                                                                   │
 │  Configuration:                                                  │
 │    • Replication Factor: 1 (no redundancy for demo)              │
@@ -128,7 +128,7 @@ Python Generator
   → {"device_id": "weather-sensor-01", "temperature": 23.5, ...}
   → MQTT: devices/weather/data
   → EMQX Bridge Rule
-  → Kafka: iot.weather.data (partition 0)
+  → Kafka: iot-weather-data (partition 0)
   → Spark Job (ingest_weather.py)
   → Validate schema, convert timestamp
   → PostgreSQL: INSERT INTO iot.weather_data (...)
@@ -140,7 +140,7 @@ Python Generator
   → {"order_id": UUID, "customer_id": 123, "items": [...], "total_amount": 45.99}
   → MQTT: devices/orders/new_order
   → EMQX Bridge Rule
-  → Kafka: iot.orders.events (partition based on order_id hash)
+  → Kafka: iot-orders-events (partition based on order_id hash)
   → Spark Job (ingest_orders.py)
   → Dedup by order_id, enrich metadata
   → PostgreSQL: INSERT INTO iot.sales_orders (...)
@@ -174,11 +174,11 @@ Python Generator
 
 | Topic | Partitions | Partition Key | Throughput | Rationale |
 |-------|-----------|---------------|-----------|-----------|
-| `iot.weather.data` | 2 | null | 5–10/min | Low frequency; round-robin OK |
-| `iot.orders.events` | 2 | order_id | 50–100/min | Medium; per-order sequencing |
-| `iot.logistics.dispatch` | 2 | shipment_id | 20–50/min | Medium; per-shipment ordering |
-| `iot.inventory.changes` | 2 | item_sku | 10–30/min | Low; per-SKU consistency |
-| `iot.users.activity` | 2 | user_id | 200–500/min | High; per-user session ordering |
+| `iot-weather-data` | 2 | null | 5–10/min | Low frequency; round-robin OK |
+| `iot-orders-events` | 2 | order_id | 50–100/min | Medium; per-order sequencing |
+| `iot-logistics-dispatch` | 2 | shipment_id | 20–50/min | Medium; per-shipment ordering |
+| `iot-inventory-changes` | 2 | item_sku | 10–30/min | Low; per-SKU consistency |
+| `iot-users-activity` | 2 | user_id | 200–500/min | High; per-user session ordering |
 
 **Total: 10 partitions across 5 topics**
 
@@ -280,11 +280,11 @@ docker exec kafka kafka-topics --bootstrap-server kafka:9092 --list
 
 # Check Kafka topic details
 docker exec kafka kafka-topics --bootstrap-server kafka:9092 \
-  --describe --topic iot.weather.data
+  --describe --topic iot-weather-data
 
 # Consume messages from Kafka
 docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 \
-  --topic iot.weather.data --from-beginning --max-messages 10
+  --topic iot-weather-data --from-beginning --max-messages 10
 ```
 
 ---

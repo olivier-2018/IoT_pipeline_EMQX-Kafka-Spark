@@ -445,7 +445,7 @@ if __name__ == "__main__":
     # Install confluent-kafka first:
     # pip install confluent-kafka
     
-    topic = sys.argv[1] if len(sys.argv) > 1 else "iot.weather.data"
+    topic = sys.argv[1] if len(sys.argv) > 1 else "iot-weather-data"
     consume_messages(topic)
 ```
 
@@ -454,12 +454,12 @@ if __name__ == "__main__":
 ```bash
 pip install confluent-kafka
 
-python3 test_kafka_consumer.py iot.weather.data
+python3 test_kafka_consumer.py iot-weather-data
 ```
 
 Expected output:
 ```
-Listening to topic: iot.weather.data
+Listening to topic: iot-weather-data
 Waiting for messages (5 sec timeout)...
 
 Message 1:

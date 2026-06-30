@@ -260,7 +260,7 @@ ORDER BY event_timestamp ASC;
 
 All Kafka topics use **2 partitions** for optimal Spark parallelism on 2 workers.
 
-### Topic: `iot.weather.data`
+### Topic: `iot-weather-data`
 - **Partitions**: 2
 - **Replication Factor**: 1
 - **Retention**: 1 day (86,400,000 ms)
@@ -282,7 +282,7 @@ All Kafka topics use **2 partitions** for optimal Spark parallelism on 2 workers
 
 ---
 
-### Topic: `iot.orders.events`
+### Topic: `iot-orders-events`
 - **Partitions**: 2
 - **Replication Factor**: 1
 - **Retention**: 1 day
@@ -307,7 +307,7 @@ All Kafka topics use **2 partitions** for optimal Spark parallelism on 2 workers
 
 ---
 
-### Topic: `iot.logistics.dispatch`
+### Topic: `iot-logistics-dispatch`
 - **Partitions**: 2
 - **Replication Factor**: 1
 - **Retention**: 1 day
@@ -334,7 +334,7 @@ All Kafka topics use **2 partitions** for optimal Spark parallelism on 2 workers
 
 ---
 
-### Topic: `iot.inventory.changes`
+### Topic: `iot-inventory-changes`
 - **Partitions**: 2
 - **Replication Factor**: 1
 - **Retention**: 1 day
@@ -356,7 +356,7 @@ All Kafka topics use **2 partitions** for optimal Spark parallelism on 2 workers
 
 ---
 
-### Topic: `iot.users.activity`
+### Topic: `iot-users-activity`
 - **Partitions**: 2
 - **Replication Factor**: 1
 - **Retention**: 1 day
