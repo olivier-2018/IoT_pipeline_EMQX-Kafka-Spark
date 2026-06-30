@@ -1,0 +1,30 @@
+[project]
+name = "iot-pipeline-demo"
+version = "0.1.0"
+description = "End-to-end IoT data pipeline: Python generators → MQTT → Kafka → Spark → PostgreSQL"
+authors = [{name = "IoT Pipeline Demo"}]
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+
+dependencies = [
+    # MQTT Data Generators
+    "paho-mqtt==1.6.1",
+    "faker==21.0.0",
+
+    # Spark Streaming & Data Processing
+    "pyspark==3.5.0",
+
+    # Database Connectivity
+    "psycopg2-binary==2.9.9",
+
+    # Monitoring & Health Checks
+    "confluent-kafka==2.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==7.4.3",
+    "black==23.12.0",
+    "pylint==3.0.3",
+]

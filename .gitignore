@@ -1,0 +1,37 @@
+# python cache
+*.pyc
+__pycache__/
+.DS_Store
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# IDE
+*.iml
+
+# DB storage
+/data/
+
+# secrets
+.env.local
+.env
+
+# logs and tmp files
+*.log
+
+# uv package manager
+.uv/
+uv.lock
+
+# Virtual environments
+*.venv/
+venv/
+env/
