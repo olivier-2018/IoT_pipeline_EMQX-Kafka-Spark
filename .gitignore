@@ -35,3 +35,6 @@ uv.lock
 *.venv/
 venv/
 env/
+
+# Claude Code
+.claude/
