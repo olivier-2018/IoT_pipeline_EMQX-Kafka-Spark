@@ -1,0 +1,96 @@
+## EMQX 5.x Configuration for IoT Data Pipeline with Kafka Bridge
+## Minimalistic settings for 12GB laptop demo
+
+##--------------------------------------------------------------------
+## Node Configuration
+##--------------------------------------------------------------------
+
+node {
+  name = "emqx@emqx"
+  cookie = "emqx_cookie"
+  data_dir = "/opt/emqx/data"
+}
+
+##--------------------------------------------------------------------
+## Listener: MQTT (TCP)
+##--------------------------------------------------------------------
+
+listeners.tcp.default {
+  bind = "0.0.0.0:1883"
+  max_connections = 1024000
+  mountpoint = ""
+}
+
+listeners.ws.default {
+  bind = "0.0.0.0:8083"
+  max_connections = 102400
+}
+
+##--------------------------------------------------------------------
+## Dashboard
+##--------------------------------------------------------------------
+
+dashboard {
+  listeners.http.internal {
+    bind = "0.0.0.0:18083"
+  }
+}
+
+##--------------------------------------------------------------------
+## Kafka Bridge Configuration
+##--------------------------------------------------------------------
+
+bridges.kafka.kafka_bridge {
+  enable = true
+  servers = "kafka:9092"
+  authentication = none
+  compression = gzip
+
+  # Default values for all topics
+  payload_encoding = none
+}
+
+##--------------------------------------------------------------------
+## Rule Engine with Kafka Actions
+##--------------------------------------------------------------------
+
+rule_engine {
+  rules {
+    rule_weather {
+      sql = "SELECT * FROM \"devices/weather/+\""
+      actions = ["bridges:kafka_bridge:iot-weather-data"]
+    }
+    rule_orders {
+      sql = "SELECT * FROM \"devices/orders/+\""
+      actions = ["bridges:kafka_bridge:iot-orders-events"]
+    }
+    rule_logistics {
+      sql = "SELECT * FROM \"devices/logistics/+\""
+      actions = ["bridges:kafka_bridge:iot-logistics-dispatch"]
+    }
+    rule_inventory {
+      sql = "SELECT * FROM \"devices/inventory/+\""
+      actions = ["bridges:kafka_bridge:iot-inventory-changes"]
+    }
+    rule_users {
+      sql = "SELECT * FROM \"devices/users/+\""
+      actions = ["bridges:kafka_bridge:iot-users-activity"]
+    }
+  }
+}
+
+##--------------------------------------------------------------------
+## Authentication (disabled for demo)
+##--------------------------------------------------------------------
+
+authentication = []
+
+##--------------------------------------------------------------------
+## Logging
+##--------------------------------------------------------------------
+
+log {
+  console {
+    level = warning
+  }
+}

@@ -33,20 +33,48 @@ uv sync
 ```bash
 cd Spark_Kafka_Docker
 bash scripts/start.sh
+
+# create API key
+# docker exec emqx emqx ctl api_keys add --name setup-key --desc "Setup script API key"
+
 ```
 
 ### 2. Start Data Generators (new terminal)
 ```bash
+source .venv/bin/activate    
 cd data-generators
-python3 main.py
+python data-generators/main.py
+```  
+Note: the data generator should now be visible as clients in the EMQX dashboards.    
+
+### 3. Check EMQX logs for Kafka bridge:
+```bash
+docker logs emqx 2>&1 | grep -i "kafka\|bridge" | head -20
 ```
 
-### 3. Submit Spark Jobs (another terminal)
+### 4. Verify Kafka is receiving messages:
+```bash
+docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 \
+  --topic iot-weather-data --from-beginning --max-messages 5 --timeout-ms 5000
+# Check kafka-ui on localhost:8888
+```
+
+### 5. Monitor live MQTT messages:
+
+```bash
+# In one terminal, subscribe to MQTT
+docker exec emqx mosquitto_sub -h localhost -t "devices/weather/+" -v
+
+# In another terminal, publish test message
+docker exec emqx mosquitto_pub -h localhost -t "devices/weather/test" -m '{"test":"data","timestamp":1234567890000}'
+```
+
+### 6. Submit Spark Jobs (another terminal)
 ```bash
 bash scripts/submit-spark-jobs.sh
 ```
 
-### 4. View Results
+### 7. View Results
 ```bash
 # Query PostgreSQL
 docker exec postgres psql -U postgres -d iot_database -c \
@@ -56,6 +84,7 @@ docker exec postgres psql -U postgres -d iot_database -c \
 # Kafka UI: http://localhost:8888 (topics, messages, partitions)
 # EMQX: http://localhost:18083 (admin/public)
 # Spark Master: http://localhost:8080
+# Node-Red: http://localhost:1880
 ```
 
 ---
@@ -261,3 +290,9 @@ This project demonstrates real-world IoT pipeline architecture using open-source
 - See [SETUP.md](docs/SETUP.md) for troubleshooting
 - See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for tuning & monitoring
 - See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for local testing & development
+
+## Acknoledgement
+
+[EMQX setup](https://www.youtube.com/watch?v=Xqdg3rUSYRc)
+
+

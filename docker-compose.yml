@@ -6,7 +6,7 @@ services:
   # MQTT Broker with Kafka Bridge
   # Receives IoT data from Python generators, forwards to Kafka topics
   emqx:
-    image: emqx/emqx:latest
+    image: emqx/emqx:6.2.1
     container_name: emqx
     ports:
       - "1883:1883"    # MQTT
@@ -15,6 +15,7 @@ services:
       - EMQX_NAME=emqx
     volumes:
       - ./config/emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
+      # - ./config/emqx/connector-rules.conf:/opt/emqx/etc/connector-rules.conf:ro
       - emqx-data:/opt/emqx/data
     networks:
       - iot-network
@@ -224,6 +225,21 @@ services:
     memswap_limit: 512m
     cpus: '0.5'
 
+  node-red:
+    image: nodered/node-red:latest
+    container_name: node-red
+    ports:
+      - "1880:1880"
+    environment:
+      - TZ=Europe/Paris
+    networks:
+      - iot-network
+    volumes:
+      - node_red_data:/data
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: '0.5'
+
 networks:
   iot-network:
     driver: bridge
@@ -234,3 +250,5 @@ volumes:
   spark-master-data:
   spark-worker-1-data:
   spark-worker-2-data:
+  node_red_data:
+  

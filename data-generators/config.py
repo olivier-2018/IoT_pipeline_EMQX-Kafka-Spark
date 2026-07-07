@@ -2,9 +2,17 @@
 # Shared settings for all mock data generators
 
 import os
+import logging
 from typing import Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 # MQTT Configuration
+# MQTT_HOST should be set in .env (e.g., "emqx" in Docker, "localhost" for local dev)
 MQTT_CONFIG = {
     "host": os.getenv("MQTT_HOST", "localhost"),
     "port": int(os.getenv("MQTT_PORT", "1883")),

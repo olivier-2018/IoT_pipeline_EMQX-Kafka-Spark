@@ -27,7 +27,10 @@ sleep 15
 echo "Step 3: Initializing Kafka topics..."
 bash scripts/init-kafka-topics.sh
 
-echo "Step 4: Running health checks..."
+echo "Step 4: Setting up EMQX Kafka connector..."
+bash scripts/setup-emqx-kafka-connector.sh
+
+echo "Step 5: Running health checks..."
 bash scripts/health-check.sh
 
 echo ""
