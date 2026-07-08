@@ -23,7 +23,7 @@ This is a minimalist end-to-end IoT data pipeline designed to run on a **12GB la
 │  • logistics_generator    → 20-50 msg/min                        │
 │  • inventory_generator    → 10-30 msg/min                        │
 │  • user_events_generator  → 200-500 msg/min                      │
-│                                                                   │
+│                                                                  │
 │  Target: 500-1000 msg/sec total (configurable)                   │
 └──────────────────────────────────────────────────────────────────┘
                             ↓
@@ -34,12 +34,12 @@ This is a minimalist end-to-end IoT data pipeline designed to run on a **12GB la
 ├──────────────────────────────────────────────────────────────────┤
 │ EMQX (MQTT Broker)                                               │
 │  • Receives: devices/{device_type}/{attribute}                   │
-│  • Forwards: via Kafka bridge → iot-{device_type}-data           │
+│  • Forwards: via Kafka connector → iot-{device_type}-data        │
 │  • Port: 1883 (MQTT), 18083 (Dashboard)                          │
 │  • Memory: 2GB                                                   │
 └──────────────────────────────────────────────────────────────────┘
                             ↓
-                  (Kafka Bridge via Rules)
+                  (Kafka connector via Rules)
                             ↓
 ┌──────────────────────────────────────────────────────────────────┐
 │ STREAMING & MESSAGING LAYER                                      │
@@ -51,7 +51,7 @@ This is a minimalist end-to-end IoT data pipeline designed to run on a **12GB la
 │    • iot-logistics-dispatch    (2 partitions)                    │
 │    • iot-inventory-changes     (2 partitions)                    │
 │    • iot-users-activity        (2 partitions)                    │
-│                                                                   │
+│                                                                  │
 │  Configuration:                                                  │
 │    • Replication Factor: 1 (no redundancy for demo)              │
 │    • Retention: 1 day (aggressive cleanup)                       │
@@ -67,17 +67,17 @@ This is a minimalist end-to-end IoT data pipeline designed to run on a **12GB la
 │ PROCESSING & TRANSFORMATION LAYER                                │
 ├──────────────────────────────────────────────────────────────────┤
 │ Apache Spark Cluster (1 Master + 2 Workers)                      │
-│                                                                   │
+│                                                                  │
 │  Master:                                                         │
 │    • Orchestrates job execution                                  │
 │    • Port: 7077 (RPC), 8080 (UI)                                 │
 │    • Memory: 512 MB                                              │
-│                                                                   │
+│                                                                  │
 │  Workers (×2):                                                   │
 │    • Execute tasks in parallel                                   │
 │    • Ports: 8081, 8082 (UI)                                      │
 │    • Memory: 1.5GB each                                          │
-│                                                                   │
+│                                                                  │
 │  Spark Jobs (Streaming):                                         │
 │    • ingest_weather.py       → validates, transforms → postgres  │
 │    • ingest_orders.py        → enrichment, dedup → postgres      │
@@ -126,7 +126,7 @@ This is a minimalist end-to-end IoT data pipeline designed to run on a **12GB la
 ```
 Python Generator
   → {"device_id": "weather-sensor-01", "temperature": 23.5, ...}
-  → MQTT: devices/weather/data
+  → MQTT topic: devices/weather/data
   → EMQX Bridge Rule
   → Kafka: iot-weather-data (partition 0)
   → Spark Job (ingest_weather.py)
@@ -138,7 +138,7 @@ Python Generator
 ```
 Python Generator
   → {"order_id": UUID, "customer_id": 123, "items": [...], "total_amount": 45.99}
-  → MQTT: devices/orders/new_order
+  → MQTT topic: devices/orders/new_order
   → EMQX Bridge Rule
   → Kafka: iot-orders-events (partition based on order_id hash)
   → Spark Job (ingest_orders.py)
@@ -322,6 +322,7 @@ docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 \
 ## Next Steps
 
 - See [SETUP.md](SETUP.md) for quick start (5 minutes to running)
+- See [MQTT_SCHEMAS.md](MQTT_SCHEMAS.md) for detailed MQTT message format definitions (JSON schemas)
+- See [DATA_SCHEMA.md](DATA_SCHEMA.md) for PostgreSQL table and Kafka topic schema definitions
 - See [DEPLOYMENT.md](DEPLOYMENT.md) for tuning and troubleshooting
-- See [DATA_SCHEMA.md](DATA_SCHEMA.md) for detailed schema definitions
 - See [DEVELOPMENT.md](DEVELOPMENT.md) for local testing and extending

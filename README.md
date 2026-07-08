@@ -39,17 +39,20 @@ bash scripts/start.sh
 
 ```
 
-### 2. Start Data Generators (new terminal)
+### 2. Start MQTT Generators (new terminal)
 ```bash
 source .venv/bin/activate    
-cd data-generators
-python data-generators/main.py
+cd mqtt-generators
+python mqtt-generators/main.py
 ```  
-Note: the data generator should now be visible as clients in the EMQX dashboards.    
+Note: the generators should now be visible as clients in the EMQX dashboards.    
 
 ### 3. Check EMQX logs for Kafka bridge:
 ```bash
 docker logs emqx 2>&1 | grep -i "kafka\|bridge" | head -20
+# API calls
+# curl -s -u <EMQX_API_KEY>:<EMQX_API_SECRET> http://localhost:18083/api/v5/
+# curl -s -u <EMQX_API_KEY>:<EMQX_API_SECRET> http://localhost:18083/api/v5/rules
 ```
 
 ### 4. Verify Kafka is receiving messages:
@@ -74,17 +77,19 @@ docker exec emqx mosquitto_pub -h localhost -t "devices/weather/test" -m '{"test
 bash scripts/submit-spark-jobs.sh
 ```
 
-### 7. View Results
+### 7. View Results & Dashboards
 ```bash
 # Query PostgreSQL
 docker exec postgres psql -U postgres -d iot_database -c \
   "SELECT COUNT(*) FROM iot.weather_data;"
 
-# Open dashboards
-# Kafka UI: http://localhost:8888 (topics, messages, partitions)
-# EMQX: http://localhost:18083 (admin/public)
-# Spark Master: http://localhost:8080
-# Node-Red: http://localhost:1880
+# Open web dashboards
+# Node-Red (MQTT testing/visualization):  http://localhost:1880
+# EMQX (MQTT broker):                      http://localhost:18083 (admin/public)
+# Kafka UI (topics, messages, partitions): http://localhost:8888
+# Spark Master (job monitoring):           http://localhost:8080
+# Spark Worker 1:                          http://localhost:8081
+# Spark Worker 2:                          http://localhost:8082
 ```
 
 ---
@@ -127,17 +132,18 @@ iot-pipeline-demo/
 ├── docs/
 │   ├── ARCHITECTURE.md             # System design, data flow, diagrams
 │   ├── SETUP.md                    # Quick start + troubleshooting
+│   ├── MQTT_SCHEMAS.md             # ✨ MQTT message format definitions (JSON schemas)
+│   ├── DATA_SCHEMA.md              # PostgreSQL/Kafka schemas, topics, ranges
 │   ├── DEPLOYMENT.md               # Tuning, benchmarks, monitoring
-│   ├── DATA_SCHEMA.md              # Schemas, topics, ranges
 │   └── DEVELOPMENT.md              # ✨ Local testing in IDE, extending
-├── data-generators/                # Python mock IoT producers
-│   ├── config.py                   # Shared configuration
-│   ├── weather_generator.py        # Weather (5–10/min)
+├── mqtt-generators/                # Python mock IoT MQTT producers
+│   ├── config.py                   # Shared MQTT configuration
+│   ├── weather_generator.py        # Weather data (10–20/min)
 │   ├── orders_generator.py         # Sales orders (50–100/min)
 │   ├── logistics_generator.py      # Shipment tracking (20–50/min)
-│   ├── inventory_generator.py      # Stock changes (10–30/min)
+│   ├── inventory_generator.py      # Inventory changes (10–30/min)
 │   ├── user_events_generator.py    # User events (200–500/min)
-│   ├── main.py                     # Orchestrator (parallel, throttled)
+│   ├── main.py                     # Orchestrator (parallel generators, throttled)
 │   └── requirements.txt
 ├── spark-jobs/                     # Spark ingestion & transformation
 │   ├── shared_utils.py             # Factories, schemas, JDBC pooling
@@ -166,20 +172,24 @@ iot-pipeline-demo/
 |----------|---------|
 | [**ARCHITECTURE.md**](docs/ARCHITECTURE.md) | System design, component rationale, data flow diagrams, performance characteristics |
 | [**SETUP.md**](docs/SETUP.md) | 5-minute quickstart, prerequisites, troubleshooting |
+| [**MQTT_SCHEMAS.md**](docs/MQTT_SCHEMAS.md) | **Complete MQTT message definitions** (JSON schemas for all 5 data types) |
+| [**DATA_SCHEMA.md**](docs/DATA_SCHEMA.md) | PostgreSQL schemas, Kafka topics, data ranges, monitoring queries |
 | [**DEPLOYMENT.md**](docs/DEPLOYMENT.md) | Performance tuning, benchmarks, monitoring, scaling |
-| [**DATA_SCHEMA.md**](docs/DATA_SCHEMA.md) | PostgreSQL schemas, Kafka topics, MQTT structure, data ranges |
 | [**DEVELOPMENT.md**](docs/DEVELOPMENT.md) | **Local Spark testing in IDE**, adding new data types |
 
 ---
 
 ## Key Features
 
-✅ **5 Mock Data Types**: Weather, sales orders, logistics packing/dispatch, inventory, user events  
+✅ **5 Mock Data Types**: Weather, sales orders, logistics, inventory, user events  
 ✅ **EMQX + Kafka**: MQTT broker with native Kafka bridge integration  
 ✅ **Spark Cluster**: 1 master + 2 workers on Docker with micro-batch streaming  
 ✅ **PostgreSQL**: Fully indexed schema with 5 tables, persistent volumes  
+✅ **Node-Red**: ✨ MQTT testing, visualization, and flow automation dashboard  
 ✅ **Minimalistic**: Optimized for 12GB laptop (aggressive resource limits)  
-✅ **Kafka Partitioning**: 2 partitions per topic (10 total) for perfect Spark worker distribution  
+✅ **Persistent Storage**: Kafka, Zookeeper, PostgreSQL, and EMQX data preserved across restarts  
+✅ **Kafka Partitioning**: 2 partitions per topic for optimal Spark worker distribution  
+✅ **Comprehensive Docs**: MQTT schemas, architecture, deployment, and local development guides  
 ✅ **Reset Script**: `bash scripts/reset.sh` for clean demo restarts  
 ✅ **Local Testing**: Run Spark jobs locally in IDE for debugging  
 ✅ **Production-Ready Code**: Proper error handling, logging, validation  
@@ -203,9 +213,11 @@ bash scripts/reset.sh
 bash scripts/health-check.sh
 python3 monitoring/health_check.py
 
-# View dashboards
+# View web dashboards
+# Node-Red: http://localhost:1880
 # EMQX: http://localhost:18083 (admin/public)
 # Spark: http://localhost:8080
+# Kafka UI: http://localhost:8888
 
 # Query data
 docker exec postgres psql -U postgres -d iot_database -c \
@@ -230,15 +242,16 @@ docker compose down && rm -rf ./data/*
 | Service | Memory | CPU | Purpose |
 |---------|--------|-----|---------|
 | EMQX | 2 GB | 0.5 | MQTT broker + Kafka bridge |
-| Kafka | 2 GB | 1.0 | Single broker, 5 topics |
+| Kafka | 2 GB | 1.0 | Single broker, 5 topics, persistent volume |
+| Zookeeper | 1 GB | 0.5 | Kafka coordination, persistent volume |
 | Kafka UI | 512 MB | 0.5 | Kafka visualization & monitoring |
-| Spark Master | 512 MB | 0.5 | Coordination |
-| Spark Worker 1 | 1.5 GB | 1.0 | Task execution |
-| Spark Worker 2 | 1.5 GB | 1.0 | Task execution |
-| PostgreSQL | 512 MB | 0.5 | Data warehouse |
-| Zookeeper | 1 GB | 0.5 | Kafka coordination |
+| Spark Master | 512 MB | 0.5 | Job coordination & scheduling |
+| Spark Worker 1 | 1.5 GB | 1.0 | Task execution & streaming processing |
+| Spark Worker 2 | 1.5 GB | 1.0 | Task execution & streaming processing |
+| PostgreSQL | 512 MB | 0.5 | Data warehouse, persistent volume |
+| Node-Red | 512 MB | 0.5 | ✨ MQTT testing, visualization, flow automation |
 | System | ~1 GB | — | OS overhead |
-| **Total** | **~11.5 GB** | **~5.5 CPU** | **12GB Recommended** |
+| **Total** | **~12 GB** | **~5.5 CPU** | **12GB Recommended** |
 
 ---
 
@@ -257,10 +270,10 @@ docker compose down && rm -rf ./data/*
 ## Next Steps
 
 1. **Quick Start** → Follow [SETUP.md](docs/SETUP.md)
-2. **Understand Design** → Read [ARCHITECTURE.md](docs/ARCHITECTURE.md)
-3. **Local Development** → See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for IDE testing
-4. **Production Tuning** → Check [DEPLOYMENT.md](docs/DEPLOYMENT.md) for optimization
-5. **Extend** → Add new data types following [DEVELOPMENT.md](docs/DEVELOPMENT.md)
+2. **Understand Data Formats** → See [MQTT_SCHEMAS.md](docs/MQTT_SCHEMAS.md) for all 5 data type definitions
+3. **Understand Design** → Read [ARCHITECTURE.md](docs/ARCHITECTURE.md)
+4. **Local Development** → See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for IDE testing & extending
+5. **Production Tuning** → Check [DEPLOYMENT.md](docs/DEPLOYMENT.md) for optimization & monitoring
 
 ---
 
@@ -293,6 +306,7 @@ This project demonstrates real-world IoT pipeline architecture using open-source
 
 ## Acknoledgement
 
-[EMQX setup](https://www.youtube.com/watch?v=Xqdg3rUSYRc)
+[EMQX setup](https://www.youtube.com/watch?v=Xqdg3rUSYRc)  
+[EQMX Kafka integration Doc](https://docs.emqx.com/en/emqx/latest/data-integration/data-bridge-kafka.html)  
 
 

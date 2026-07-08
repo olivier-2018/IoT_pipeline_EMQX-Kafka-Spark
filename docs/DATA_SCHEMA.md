@@ -383,15 +383,17 @@ All Kafka topics use **2 partitions** for optimal Spark parallelism on 2 workers
 
 Data generators publish to MQTT, which EMQX forwards to Kafka via bridge rules.
 
-### MQTT Topics
+**For comprehensive MQTT message format definitions (full JSON schemas), see [MQTT_SCHEMAS.md](MQTT_SCHEMAS.md).**
 
-| Data Type | MQTT Topic | Frequency | Payload |
-|-----------|-----------|-----------|---------|
-| Weather | `devices/weather/data` | 10/min | `{device_id, temperature, humidity, pressure, timestamp}` |
-| Orders | `devices/orders/new_order` | 100/min | `{order_id, customer_id, items[], total_amount, timestamp}` |
-| Logistics | `devices/logistics/dispatch` | 50/min | `{shipment_id, order_id, status, location, timestamp}` |
-| Inventory | `devices/inventory/change` | 30/min | `{item_sku, warehouse_id, quantity_delta, reason, timestamp}` |
-| User Events | `devices/users/event` | 500/min | `{user_id, event_type, page, session_id, timestamp}` |
+### MQTT Topics Overview
+
+| Data Type | MQTT Topic | Frequency | Partition Key | Kafka Topic |
+|-----------|-----------|-----------|---------|---------|
+| Weather | `devices/weather/data` | 10–20/min | none | `iot-weather-data` |
+| Orders | `devices/orders/new_order` | 50–100/min | `order_id` | `iot-orders-events` |
+| Logistics | `devices/logistics/dispatch` | 20–50/min | `shipment_id` | `iot-logistics-dispatch` |
+| Inventory | `devices/inventory/change` | 10–30/min | `item_sku` | `iot-inventory-changes` |
+| User Events | `devices/users/event` | 200–500/min | `user_id` | `iot-users-activity` |
 
 ---
 

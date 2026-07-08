@@ -496,7 +496,7 @@ Test individual data generators in isolation.
 """Unit test for data generators"""
 
 import sys
-sys.path.insert(0, '/home/sirius/TUTORIALS/Spark_Kafka_Docker/data-generators')
+sys.path.insert(0, '/home/sirius/TUTORIALS/Spark_Kafka_Docker/mqtt-generators')
 
 from weather_generator import WeatherGenerator
 from orders_generator import OrdersGenerator
@@ -572,7 +572,7 @@ python3 test_generators.py
 To add a new data type (e.g., "machine metrics"):
 
 ### Step 1: Create Generator
-Create `data-generators/machine_metrics_generator.py`:
+Create `mqtt-generators/machine_metrics_generator.py`:
 
 ```python
 class MachineMetricsGenerator:
@@ -593,7 +593,7 @@ class MachineMetricsGenerator:
 ```
 
 ### Step 2: Add to Orchestrator
-Update `data-generators/main.py`:
+Update `mqtt-generators/main.py`:
 
 ```python
 from machine_metrics_generator import MachineMetricsGenerator

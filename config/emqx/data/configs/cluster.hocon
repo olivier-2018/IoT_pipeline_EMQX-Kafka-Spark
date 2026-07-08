@@ -1,0 +1,677 @@
+# This file is generated. Do not edit.
+# The configs are results of online config changes from UI/API/CLI.
+# To persist configs in this file, copy the content to etc/base.hocon.
+actions {
+  kafka_producer {
+    emqx-kafka-inventory-change {
+      connector = "emqx-kafka-producer"
+      created_at = 1783512899768
+      description = "transfer inventory IoT data to Kafka"
+      enable = true
+      fallback_actions = []
+      last_modified_at = 1783512899768
+      parameters {
+        buffer {
+          memory_overload_protection = true
+          mode = memory
+          per_partition_limit = "256MB"
+          segment_bytes = "10MB"
+        }
+        compression = no_compression
+        kafka_ext_headers = [
+          {
+            kafka_ext_header_key = clientid
+            kafka_ext_header_value = "${clientid}"
+          }
+        ]
+        kafka_header_value_encode_mode = none
+        max_batch_bytes = "896KB"
+        max_inflight = 10
+        max_linger_bytes = "10MB"
+        max_linger_time = "0ms"
+        message {
+          key = "${clientid}"
+          timestamp = "${.timestamp}"
+          value = """~
+            {"topic":"${topic}", 
+            "payload":"${payload}", 
+            "qos":"${qos}", 
+            "retain":"${retain}"
+            }~"""
+        }
+        partition_count_refresh_interval = "60s"
+        partition_strategy = random
+        partitions_limit = all_partitions
+        query_mode = async
+        required_acks = all_isr
+        sync_query_timeout = "5s"
+        topic = "iot-inventory-changes"
+      }
+      resource_opts {
+        health_check_interval = "15s"
+        health_check_timeout = "60s"
+      }
+    }
+    emqx-kafka-logistics-dispatch {
+      connector = "emqx-kafka-producer"
+      created_at = 1783512655300
+      description = "transfer logistic dispatch data to Kafka"
+      enable = true
+      fallback_actions = []
+      last_modified_at = 1783512655300
+      parameters {
+        buffer {
+          memory_overload_protection = true
+          mode = memory
+          per_partition_limit = "256MB"
+          segment_bytes = "10MB"
+        }
+        compression = no_compression
+        kafka_ext_headers = [
+          {
+            kafka_ext_header_key = clientid
+            kafka_ext_header_value = "${clientid}"
+          }
+        ]
+        kafka_header_value_encode_mode = none
+        max_batch_bytes = "896KB"
+        max_inflight = 10
+        max_linger_bytes = "10MB"
+        max_linger_time = "0ms"
+        message {
+          key = "${clientid}"
+          timestamp = "${.timestamp}"
+          value = """~
+            {"topic":"${topic}", 
+            "payload":"${payload}", 
+            "qos":"${qos}", 
+            "retain":"${retain}"
+            }~"""
+        }
+        partition_count_refresh_interval = "60s"
+        partition_strategy = random
+        partitions_limit = all_partitions
+        query_mode = async
+        required_acks = all_isr
+        sync_query_timeout = "5s"
+        topic = "iot-logistics-dispatch"
+      }
+      resource_opts {
+        health_check_interval = "15s"
+        health_check_timeout = "60s"
+      }
+    }
+    emqx-kafka-neworders {
+      connector = "emqx-kafka-producer"
+      created_at = 1783512268705
+      description = "transfer new orders to Kafka"
+      enable = true
+      fallback_actions = []
+      last_modified_at = 1783512268705
+      parameters {
+        buffer {
+          memory_overload_protection = true
+          mode = memory
+          per_partition_limit = "256MB"
+          segment_bytes = "10MB"
+        }
+        compression = no_compression
+        kafka_ext_headers = [
+          {
+            kafka_ext_header_key = clientid
+            kafka_ext_header_value = "${clientid}"
+          }
+        ]
+        kafka_header_value_encode_mode = none
+        max_batch_bytes = "896KB"
+        max_inflight = 10
+        max_linger_bytes = "10MB"
+        max_linger_time = "0ms"
+        message {
+          key = "${clientid}"
+          timestamp = "${.timestamp}"
+          value = """~
+            {"topic":"${topic}", 
+            "payload":"${payload}", 
+            "qos":"${qos}", 
+            "retain":"${retain}"
+            }~"""
+        }
+        partition_count_refresh_interval = "60s"
+        partition_strategy = random
+        partitions_limit = all_partitions
+        query_mode = async
+        required_acks = all_isr
+        sync_query_timeout = "5s"
+        topic = "iot-orders-events"
+      }
+      resource_opts {
+        health_check_interval = "15s"
+        health_check_timeout = "60s"
+      }
+    }
+    emqx-kafka-nodered-demo {
+      connector = "emqx-kafka-producer"
+      created_at = 1783513789531
+      description = "only used for Node Red demo"
+      enable = true
+      fallback_actions = []
+      last_modified_at = 1783513789531
+      parameters {
+        buffer {
+          memory_overload_protection = true
+          mode = memory
+          per_partition_limit = "256MB"
+          segment_bytes = "10MB"
+        }
+        compression = no_compression
+        kafka_ext_headers = [
+          {
+            kafka_ext_header_key = clientid
+            kafka_ext_header_value = "${clientid}"
+          }
+        ]
+        kafka_header_value_encode_mode = none
+        max_batch_bytes = "896KB"
+        max_inflight = 10
+        max_linger_bytes = "10MB"
+        max_linger_time = "0ms"
+        message {
+          key = "${clientid}"
+          timestamp = "${.timestamp}"
+          value = """~
+            {"topic":"${topic}", 
+            "payload":"${payload}", 
+            "qos":"${qos}"
+            }~"""
+        }
+        partition_count_refresh_interval = "60s"
+        partition_strategy = random
+        partitions_limit = all_partitions
+        query_mode = async
+        required_acks = all_isr
+        sync_query_timeout = "5s"
+        topic = "demo-mqtt2kafka"
+      }
+      resource_opts {
+        health_check_interval = "15s"
+        health_check_timeout = "60s"
+      }
+    }
+    emqx-kafka-user-events {
+      connector = "emqx-kafka-producer"
+      created_at = 1783513275963
+      description = "transfer user-events IoT data to Kafka"
+      enable = true
+      fallback_actions = []
+      last_modified_at = 1783513275963
+      parameters {
+        buffer {
+          memory_overload_protection = true
+          mode = memory
+          per_partition_limit = "256MB"
+          segment_bytes = "10MB"
+        }
+        compression = no_compression
+        kafka_ext_headers = [
+          {
+            kafka_ext_header_key = clientid
+            kafka_ext_header_value = "${clientid}"
+          }
+        ]
+        kafka_header_value_encode_mode = none
+        max_batch_bytes = "896KB"
+        max_inflight = 10
+        max_linger_bytes = "10MB"
+        max_linger_time = "0ms"
+        message {
+          key = "${clientid}"
+          timestamp = "${.timestamp}"
+          value = """~
+            {"topic":"${topic}", 
+            "payload":"${payload}", 
+            "qos":"${qos}", 
+            "retain":"${retain}"
+            }~"""
+        }
+        partition_count_refresh_interval = "60s"
+        partition_strategy = random
+        partitions_limit = all_partitions
+        query_mode = async
+        required_acks = all_isr
+        sync_query_timeout = "5s"
+        topic = "iot-users-activity"
+      }
+      resource_opts {
+        health_check_interval = "15s"
+        health_check_timeout = "60s"
+      }
+    }
+    emqx-kafka-weather {
+      connector = "emqx-kafka-producer"
+      created_at = 1783511922167
+      description = "transfer weather IoT data to Kafka"
+      enable = true
+      fallback_actions = []
+      last_modified_at = 1783511922167
+      parameters {
+        buffer {
+          memory_overload_protection = true
+          mode = memory
+          per_partition_limit = "256MB"
+          segment_bytes = "10MB"
+        }
+        compression = no_compression
+        kafka_ext_headers = [
+          {
+            kafka_ext_header_key = clientid
+            kafka_ext_header_value = "${clientid}"
+          }
+        ]
+        kafka_header_value_encode_mode = none
+        max_batch_bytes = "896KB"
+        max_inflight = 10
+        max_linger_bytes = "10MB"
+        max_linger_time = "0ms"
+        message {
+          key = "${clientid}"
+          timestamp = "${.timestamp}"
+          value = """~
+            {"topic":"${topic}", 
+            "payload":"${payload}", 
+            "qos":"${qos}", 
+            "retain":"${retain}"
+            }~"""
+        }
+        partition_count_refresh_interval = "60s"
+        partition_strategy = random
+        partitions_limit = all_partitions
+        query_mode = async
+        required_acks = all_isr
+        sync_query_timeout = "5s"
+        topic = "iot-weather-data"
+      }
+      resource_opts {
+        health_check_interval = "15s"
+        health_check_timeout = "60s"
+      }
+    }
+  }
+}
+connectors {
+  kafka_producer {
+    emqx-kafka-producer {
+      allow_auto_topic_creation = false
+      authentication = none
+      bootstrap_hosts = "kafka:9092"
+      connect_timeout = "5s"
+      description = "kafka producer connector"
+      enable = true
+      metadata_request_timeout = "5s"
+      min_metadata_refresh_interval = "3s"
+      resource_opts {
+        health_check_interval = "15s"
+        health_check_timeout = "60s"
+        start_after_created = true
+        start_timeout = "5s"
+      }
+      socket_opts {
+        nodelay = true
+        recbuf = "1MB"
+        sndbuf = "1MB"
+        tcp_keepalive = none
+      }
+      ssl {
+        ciphers = []
+        depth = 10
+        enable = false
+        hibernate_after = "5s"
+        log_level = notice
+        middlebox_comp_mode = true
+        reuse_sessions = false
+        secure_renegotiate = true
+        server_name_indication = auto
+        verify = verify_peer
+        versions = [
+          "tlsv1.3",
+          "tlsv1.2"
+        ]
+      }
+    }
+  }
+}
+dashboard {
+  listeners {
+    http {bind = 18083}
+    https {
+      ssl_options {
+        certfile = "${EMQX_ETC_DIR}/certs/cert.pem"
+        keyfile = "${EMQX_ETC_DIR}/certs/key.pem"
+      }
+    }
+  }
+}
+listeners {
+  ssl {
+    default {
+      acceptors = 16
+      access_rules = [
+        "allow all"
+      ]
+      bind = "0.0.0.0:8883"
+      enable = true
+      enable_authn = true
+      max_connections = infinity
+      mountpoint = ""
+      parse_unit = frame
+      proxy_protocol = false
+      proxy_protocol_timeout = "3s"
+      ssl_options {
+        cacertfile = "${EMQX_ETC_DIR}/certs/cacert.pem"
+        certfile = "${EMQX_ETC_DIR}/certs/cert.pem"
+        ciphers = []
+        client_renegotiation = true
+        depth = 10
+        enable_crl_check = false
+        fail_if_no_peer_cert = false
+        gc_after_handshake = false
+        handshake_timeout = "15s"
+        hibernate_after = "5s"
+        honor_cipher_order = true
+        keyfile = "${EMQX_ETC_DIR}/certs/key.pem"
+        log_level = notice
+        ocsp {
+          enable_ocsp_stapling = false
+          refresh_http_timeout = "15s"
+          refresh_interval = "5m"
+        }
+        reuse_sessions = false
+        secure_renegotiate = true
+        session_tickets = disabled
+        verify = verify_none
+        versions = [
+          "tlsv1.3",
+          "tlsv1.2"
+        ]
+      }
+      tcp_options {
+        active_n = 10
+        backlog = 1024
+        buffer = "4KB"
+        high_watermark = "1MB"
+        keepalive = none
+        nodelay = true
+        nolinger = false
+        reuseaddr = true
+        send_timeout = "15s"
+        send_timeout_close = true
+      }
+      zone = default
+    }
+  }
+  tcp {
+    default {
+      acceptors = 16
+      access_rules = [
+        "allow all"
+      ]
+      bind = "0.0.0.0:1883"
+      enable = true
+      enable_authn = true
+      max_connections = 1024000
+      mountpoint = ""
+      parse_unit = frame
+      proxy_protocol = false
+      proxy_protocol_timeout = "3s"
+      tcp_backend = gen_tcp
+      tcp_options {
+        active_n = 10
+        backlog = 1024
+        buffer = "4KB"
+        high_watermark = "1MB"
+        keepalive = none
+        nodelay = true
+        nolinger = false
+        reuseaddr = true
+        send_timeout = "15s"
+        send_timeout_close = true
+      }
+      zone = default
+    }
+  }
+  ws {
+    default {
+      acceptors = 16
+      access_rules = [
+        "allow all"
+      ]
+      bind = "0.0.0.0:8083"
+      enable = false
+      enable_authn = true
+      max_connections = infinity
+      mountpoint = ""
+      proxy_protocol = false
+      proxy_protocol_timeout = "3s"
+      tcp_options {
+        active_n = 10
+        backlog = 1024
+        buffer = "4KB"
+        high_watermark = "1MB"
+        keepalive = none
+        nodelay = true
+        nolinger = false
+        reuseaddr = true
+        send_timeout = "15s"
+        send_timeout_close = true
+      }
+      websocket {
+        allow_origin_absence = true
+        check_origin_enable = false
+        check_origins = "http://localhost:18083, http://127.0.0.1:18083"
+        compress = false
+        deflate_opts {
+          client_context_takeover = takeover
+          client_max_window_bits = 15
+          mem_level = 8
+          server_context_takeover = takeover
+          server_max_window_bits = 15
+          strategy = default
+        }
+        fail_if_no_subprotocol = true
+        idle_timeout = "7200s"
+        max_frame_size = infinity
+        mqtt_path = "/mqtt"
+        mqtt_piggyback = multiple
+        proxy_address_header = "x-forwarded-for"
+        proxy_port_header = "x-forwarded-port"
+        supported_subprotocols = "mqtt, mqtt-v3, mqtt-v3.1.1, mqtt-v5"
+        validate_utf8 = true
+      }
+      zone = default
+    }
+  }
+  wss {
+    default {
+      acceptors = 16
+      access_rules = [
+        "allow all"
+      ]
+      bind = "0.0.0.0:8084"
+      enable = true
+      enable_authn = true
+      max_connections = infinity
+      mountpoint = ""
+      proxy_protocol = false
+      proxy_protocol_timeout = "3s"
+      ssl_options {
+        cacertfile = "${EMQX_ETC_DIR}/certs/cacert.pem"
+        certfile = "${EMQX_ETC_DIR}/certs/cert.pem"
+        ciphers = []
+        client_renegotiation = true
+        depth = 10
+        fail_if_no_peer_cert = false
+        handshake_timeout = "15s"
+        hibernate_after = "5s"
+        honor_cipher_order = true
+        keyfile = "${EMQX_ETC_DIR}/certs/key.pem"
+        log_level = notice
+        reuse_sessions = false
+        secure_renegotiate = true
+        session_tickets = disabled
+        verify = verify_none
+        versions = [
+          "tlsv1.3",
+          "tlsv1.2"
+        ]
+      }
+      tcp_options {
+        active_n = 10
+        backlog = 1024
+        buffer = "4KB"
+        high_watermark = "1MB"
+        keepalive = none
+        nodelay = true
+        nolinger = false
+        reuseaddr = true
+        send_timeout = "15s"
+        send_timeout_close = true
+      }
+      websocket {
+        allow_origin_absence = true
+        check_origin_enable = false
+        check_origins = "http://localhost:18083, http://127.0.0.1:18083"
+        compress = false
+        deflate_opts {
+          client_context_takeover = takeover
+          client_max_window_bits = 15
+          mem_level = 8
+          server_context_takeover = takeover
+          server_max_window_bits = 15
+          strategy = default
+        }
+        fail_if_no_subprotocol = true
+        idle_timeout = "7200s"
+        max_frame_size = infinity
+        mqtt_path = "/mqtt"
+        mqtt_piggyback = multiple
+        proxy_address_header = "x-forwarded-for"
+        proxy_port_header = "x-forwarded-port"
+        supported_subprotocols = "mqtt, mqtt-v3, mqtt-v3.1.1, mqtt-v5"
+        validate_utf8 = true
+      }
+      zone = default
+    }
+  }
+}
+log {
+  console {}
+  file {}
+}
+rule_engine {
+  ignore_sys_message = true
+  jq_function_default_timeout = "10s"
+  limit_selects_in_namespace = true
+  rules {
+    rule_Node-Red-Demo {
+      actions = [
+        "kafka_producer:emqx-kafka-nodered-demo"
+      ]
+      description = ""
+      enable = true
+      metadata {created_at = 1783513803614, last_modified_at = 1783513803614}
+      sql = """~
+        SELECT
+          *
+        FROM
+          "demo/mqtt2kafka"~"""
+    }
+    rule_inventory-change {
+      actions = [
+        "kafka_producer:emqx-kafka-inventory-change"
+      ]
+      description = ""
+      enable = true
+      metadata {created_at = 1783512911310, last_modified_at = 1783512911310}
+      sql = """~
+        SELECT
+          topic, payload, qos, retain
+        FROM
+          "devices/inventory/change"~"""
+    }
+    rule_logistics-dispatch {
+      actions = [
+        "kafka_producer:emqx-kafka-logistics-dispatch"
+      ]
+      description = ""
+      enable = true
+      metadata {created_at = 1783512663072, last_modified_at = 1783512663072}
+      sql = """~
+        SELECT
+          topic, payload, qos, retain
+        FROM
+          "devices/logistics/dispatch"~"""
+    }
+    rule_new-orders {
+      actions = [
+        "kafka_producer:emqx-kafka-neworders"
+      ]
+      description = ""
+      enable = true
+      metadata {created_at = 1783512295082, last_modified_at = 1783512295082}
+      sql = """~
+        SELECT
+          topic, payload, qos, retain
+        FROM
+          "devices/orders/new_order"~"""
+    }
+    rule_users-event {
+      actions = [
+        "kafka_producer:emqx-kafka-user-events"
+      ]
+      description = ""
+      enable = true
+      metadata {created_at = 1783513285164, last_modified_at = 1783513285164}
+      sql = """~
+        SELECT
+          topic, payload, qos, retain
+        FROM
+          "devices/users/event"~"""
+    }
+    rule_weather_data {
+      actions = [
+        "kafka_producer:emqx-kafka-weather"
+      ]
+      description = ""
+      enable = true
+      metadata {created_at = 1783511937653, last_modified_at = 1783511937653}
+      sql = """~
+        SELECT
+          topic, payload, qos, retain
+        FROM
+          "devices/weather/data"~"""
+    }
+  }
+  ssrf {
+    allow_cidrs = []
+    deny_cidrs = [
+      "127.0.0.0/8",
+      "::1/128",
+      "fe80::/10",
+      "10.0.0.0/8",
+      "172.16.0.0/12",
+      "192.168.0.0/16",
+      "fc00::/7",
+      "0.0.0.0/32",
+      "224.0.0.0/4",
+      "ff00::/8",
+      "100.100.100.200/32",
+      "169.254.0.0/16"
+    ]
+    deny_hosts = [
+      "metadata.tencentyun.com",
+      "metadata.google.internal",
+      "metadata.azure.internal"
+    ]
+    enable = false
+  }
+}

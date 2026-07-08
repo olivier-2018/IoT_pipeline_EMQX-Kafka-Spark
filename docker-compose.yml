@@ -11,12 +11,13 @@ services:
     ports:
       - "1883:1883"    # MQTT
       - "18083:18083"  # Web UI (admin:public)
+      - "8083:8083"    # WebSocket (debug)
     environment:
       - EMQX_NAME=emqx
     volumes:
+      # See config/emqx/README.md for EMQX config info
       - ./config/emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
-      # - ./config/emqx/connector-rules.conf:/opt/emqx/etc/connector-rules.conf:ro
-      - emqx-data:/opt/emqx/data
+      - ./data-emqx:/opt/emqx/data
     networks:
       - iot-network
     mem_limit: 2g
@@ -50,6 +51,8 @@ services:
       KAFKA_MIN_INSYNC_REPLICAS: 1
       KAFKA_COMPRESSION_TYPE: gzip
       KAFKA_HEAP_OPTS: "-Xmx2g -Xms1g"
+    volumes:
+      - ./data-kafka:/var/lib/kafka/data
     depends_on:
       - zookeeper
     networks:
@@ -74,6 +77,8 @@ services:
       ZOOKEEPER_SYNC_LIMIT: 2
       ZOOKEEPER_INIT_LIMIT: 5
       ZOOKEEPER_HEAP_OPTS: "-Xmx512m"
+    volumes:
+      - ./data-zookeeper:/var/lib/zookeeper/data
     networks:
       - iot-network
     mem_limit: 1g
@@ -85,10 +90,32 @@ services:
       timeout: 5s
       retries: 5
 
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8888:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    volumes:
+      - ./data-kafka-ui:/workspace
+    depends_on:
+      - kafka
+      - zookeeper
+    networks:
+      - iot-network
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: '0.5'
+
   # Spark Master
   # Orchestrates Spark jobs submitted by Spark workers
   spark-master:
-    image: apache/spark:3.5.0
+    build:
+      context: .
+      dockerfile: config/spark/Dockerfile
     container_name: spark-master
     ports:
       - "7077:7077"
@@ -101,7 +128,7 @@ services:
       SPARK_NO_DAEMONIZE: 'true'
     volumes:
       - ./spark-jobs:/spark-jobs:ro
-      - spark-master-data:/tmp/spark-data
+      - ./data-spark-master:/tmp/spark-data
     networks:
       - iot-network
     mem_limit: 512m
@@ -115,7 +142,9 @@ services:
 
   # Spark Worker 1
   spark-worker-1:
-    image: apache/spark:3.5.0
+    build:
+      context: .
+      dockerfile: config/spark/Dockerfile
     container_name: spark-worker-1
     ports:
       - "8081:8081"
@@ -127,7 +156,7 @@ services:
       SPARK_LOCAL_IP: spark-worker-1
     volumes:
       - ./spark-jobs:/spark-jobs:ro
-      - spark-worker-1-data:/tmp/spark-data
+      - ./data-spark-worker-1:/tmp/spark-data
     depends_on:
       - spark-master
     networks:
@@ -155,7 +184,7 @@ services:
       SPARK_LOCAL_IP: spark-worker-2
     volumes:
       - ./spark-jobs:/spark-jobs:ro
-      - spark-worker-2-data:/tmp/spark-data
+      - ./data-spark-worker-2:/tmp/spark-data
     depends_on:
       - spark-master
     networks:
@@ -182,7 +211,7 @@ services:
       POSTGRES_DB: iot_database
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - ./data-postgres:/var/lib/postgresql/data
       - ./config/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - iot-network
@@ -207,23 +236,6 @@ services:
       retries: 5
 
   # Kafka UI - Web interface for monitoring Kafka topics, messages, and partitions
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka-ui
-    ports:
-      - "8888:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-    depends_on:
-      - kafka
-      - zookeeper
-    networks:
-      - iot-network
-    mem_limit: 512m
-    memswap_limit: 512m
-    cpus: '0.5'
 
   node-red:
     image: nodered/node-red:latest
@@ -235,7 +247,7 @@ services:
     networks:
       - iot-network
     volumes:
-      - node_red_data:/data
+      - ./data-nodered:/data
     mem_limit: 512m
     memswap_limit: 512m
     cpus: '0.5'
@@ -245,10 +257,10 @@ networks:
     driver: bridge
     external: false
 
-volumes:
-  emqx-data:
-  spark-master-data:
-  spark-worker-1-data:
-  spark-worker-2-data:
-  node_red_data:
+# volumes:
+#   emqx-data:
+#   spark-master-data:
+#   spark-worker-1-data:
+#   spark-worker-2-data:
+#   node_red_data:
   

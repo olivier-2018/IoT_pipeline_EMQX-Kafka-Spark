@@ -55,15 +55,15 @@ Or use the Python health check:
 python3 monitoring/health_check.py
 ```
 
-### Step 3: Install Data Generator Dependencies (1 min)
+### Step 3: Install MQTT Generator Dependencies (1 min)
 ```bash
-cd data-generators
+cd mqtt-generators
 pip install -r requirements.txt
 ```
 
-### Step 4: Start Data Generators (in new terminal)
+### Step 4: Start MQTT Generators (in new terminal)
 ```bash
-cd data-generators
+cd mqtt-generators
 python3 main.py
 ```
 

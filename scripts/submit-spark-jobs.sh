@@ -6,19 +6,22 @@ set -e
 
 SPARK_MASTER="spark://spark-master:7077"
 SPARK_HOME="/opt/spark"
-JOBS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/spark-jobs"
+# Use container mount point, not host path
+JOBS_DIR_CONTAINER="/spark-jobs"
 
 echo "=== Submitting Spark Jobs ==="
 echo "Spark Master: $SPARK_MASTER"
-echo "Jobs Directory: $JOBS_DIR"
+echo "Jobs Directory (in container): $JOBS_DIR_CONTAINER"
 echo ""
 
-# Check if Spark master is reachable
-echo "Checking Spark master connectivity..."
-if ! nc -z spark-master 7077 2>/dev/null; then
-    echo "⚠ Warning: Cannot connect to Spark master at $SPARK_MASTER"
-    echo "Make sure Docker containers are running: docker compose ps"
+# Check if Spark master container is running
+echo "Checking Spark master status..."
+if ! docker ps --filter "name=spark-master" --format "{{.Status}}" | grep -q "Up"; then
+    echo "✗ Error: spark-master container is not running"
+    echo "  Run: docker compose up -d"
+    exit 1
 fi
+echo "✓ Spark master container is running"
 
 sleep 2
 
@@ -34,16 +37,16 @@ jobs=(
 for job in "${jobs[@]}"; do
     echo ""
     echo "Submitting: $job"
-    
-    docker exec spark-master spark-submit \
+
+    docker exec spark-master /opt/spark/bin/spark-submit \
         --master "$SPARK_MASTER" \
         --driver-memory 512m \
         --executor-memory 1g \
         --executor-cores 1 \
         --total-executor-cores 2 \
-        --py-files "$JOBS_DIR/shared_utils.py" \
-        "$JOBS_DIR/$job" &
-    
+        --py-files "$JOBS_DIR_CONTAINER/shared_utils.py" \
+        "$JOBS_DIR_CONTAINER/$job" &
+
     echo "  ✓ Submitted (running in background)"
     sleep 2
 done

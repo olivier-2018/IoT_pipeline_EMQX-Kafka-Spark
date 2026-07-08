@@ -180,7 +180,7 @@ SELECT COUNT(*) FROM iot.weather_data;  -- Returns 0 after 5 minutes
 
 | Cause | Fix |
 |-------|-----|
-| Data generators not started | `cd data-generators && python main.py` |
+| MQTT generators not started | `cd mqtt-generators && python main.py` |
 | MQTT → Kafka bridge not configured | Restart EMQX: `docker compose restart emqx` |
 | Spark job submission failed | Check `docker logs spark-master` |
 | PostgreSQL connection pool exhausted | Reduce Spark parallelism: `--total-executor-cores 1` |
