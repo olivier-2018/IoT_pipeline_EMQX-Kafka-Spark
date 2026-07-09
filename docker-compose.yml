@@ -117,22 +117,24 @@ services:
       context: .
       dockerfile: config/spark/Dockerfile
     container_name: spark-master
+    command: >
+      bash -c "/opt/spark/bin/spark-class org.apache.spark.deploy.master.Master"
     ports:
       - "7077:7077"
       - "8080:8080"
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     environment:
-      SPARK_MASTER_HOST: spark-master
-      SPARK_MASTER_PORT: 7077
-      SPARK_MASTER_WEBUI_PORT: 8080
-      SPARK_NO_DAEMONIZE: 'true'
+      - SPARK_NO_DAEMONIZE=true
     volumes:
-      - ./spark-jobs:/spark-jobs:ro
+      - ./spark-jobs:/opt/spark-jobs:ro
       - ./data-spark-master:/tmp/spark-data
     networks:
       - iot-network
-    mem_limit: 512m
-    memswap_limit: 512m
+    # 512m is too tight once client-mode spark-submit runs its driver JVM here
+    # alongside the Master daemon: Spark enforces a ~450MB minimum driver heap
+    # (SparkIllegalArgumentException: INVALID_DRIVER_MEMORY) on top of the
+    # Master's own ~150-200MB footprint.
+    mem_limit: 900m
+    memswap_limit: 900m
     cpus: '0.5'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
@@ -146,16 +148,14 @@ services:
       context: .
       dockerfile: config/spark/Dockerfile
     container_name: spark-worker-1
+    command: >
+      bash -c "/opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077"
     ports:
-      - "8081:8081"
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+      - "8081:8081"   # Worker UI
     environment:
-      SPARK_WORKER_MEMORY: 1g
-      SPARK_WORKER_CORES: 1
-      SPARK_NO_DAEMONIZE: 'true'
-      SPARK_LOCAL_IP: spark-worker-1
+      - SPARK_NO_DAEMONIZE=true
     volumes:
-      - ./spark-jobs:/spark-jobs:ro
+      - ./spark-jobs:/opt/spark-jobs:ro
       - ./data-spark-worker-1:/tmp/spark-data
     depends_on:
       - spark-master
@@ -172,18 +172,18 @@ services:
 
   # Spark Worker 2
   spark-worker-2:
-    image: apache/spark:3.5.0
+    build:
+      context: .
+      dockerfile: config/spark/Dockerfile
     container_name: spark-worker-2
+    command: >
+      bash -c "/opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077"
     ports:
       - "8082:8081"
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
-      SPARK_WORKER_MEMORY: 1g
-      SPARK_WORKER_CORES: 1
-      SPARK_NO_DAEMONIZE: 'true'
-      SPARK_LOCAL_IP: spark-worker-2
+      - SPARK_NO_DAEMONIZE=true
     volumes:
-      - ./spark-jobs:/spark-jobs:ro
+      - ./spark-jobs:/opt/spark-jobs:ro
       - ./data-spark-worker-2:/tmp/spark-data
     depends_on:
       - spark-master

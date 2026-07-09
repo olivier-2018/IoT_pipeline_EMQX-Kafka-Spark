@@ -43,6 +43,7 @@ check_service "postgres" "" "5432" || true
 check_service "spark-master" "http://localhost:8080" "8080" || true
 check_service "spark-worker-1" "http://localhost:8081" "8081" || true
 check_service "spark-worker-2" "http://localhost:8082" "8082" || true
+# curl -s http://localhost:8080/json/ | python3 -c "import json,sys; d=json.load(sys.stdin); print('workers:', len(d.get('workers',[]))); [print(w['id'], w['state']) for w in d.get('workers',[])]"
 
 echo ""
 echo "Network Connectivity:"

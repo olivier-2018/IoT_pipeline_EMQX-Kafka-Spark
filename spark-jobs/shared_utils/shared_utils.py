@@ -33,7 +33,6 @@ class SparkSessionFactory:
             SparkSession.builder
             .appName(app_name)
             .master(master_url)
-            .config("spark.jars.packages", "org.postgresql:postgresql:42.6.0")
             .config("spark.sql.shuffle.partitions", "4")
             .config("spark.default.parallelism", "4")
             .config("spark.sql.adaptive.enabled", "true")
