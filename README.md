@@ -109,7 +109,7 @@ PostgreSQL (5 tables, fully indexed)
 ```
 
 **Key Stats**:
-- **Memory**: 10GB (2GB EMQX, 2GB Kafka, 3GB Spark, 512MB PG, 1GB system)
+- **Memory**: ~14.5GB (2GB EMQX, 2GB Kafka, 1GB Zookeeper, 512MB Kafka UI, 7GB Spark [4GB master + 1.5GB x2 workers], 512MB PG, 512MB Node-RED, ~1GB system)
 - **Latency**: 15–30 sec end-to-end
 - **Throughput**: 500–1000 msg/sec configurable
 - **Data**: 5 types (weather, orders, logistics, inventory, user events)
@@ -146,7 +146,9 @@ iot-pipeline-demo/
 │   ├── main.py                     # Orchestrator (parallel generators, throttled)
 │   └── requirements.txt
 ├── spark-jobs/                     # Spark ingestion & transformation
-│   ├── shared_utils.py             # Factories, schemas, JDBC pooling
+│   ├── shared_utils/                # Factories, schemas, JDBC pooling
+│   │   └── shared_utils.py
+│   ├── shared_utils.zip             # Prebuilt --py-files archive of shared_utils/
 │   ├── ingest_weather.py           # Kafka → PostgreSQL (weather)
 │   ├── ingest_orders.py            # Kafka → PostgreSQL (orders)
 │   ├── ingest_logistics.py         # Kafka → PostgreSQL (logistics)
@@ -245,13 +247,15 @@ docker compose down && rm -rf ./data/*
 | Kafka | 2 GB | 1.0 | Single broker, 5 topics, persistent volume |
 | Zookeeper | 1 GB | 0.5 | Kafka coordination, persistent volume |
 | Kafka UI | 512 MB | 0.5 | Kafka visualization & monitoring |
-| Spark Master | 512 MB | 0.5 | Job coordination & scheduling |
+| Spark Master | 4 GB | 0.5 | Job coordination + client-mode driver JVMs (up to 5 concurrent) |
 | Spark Worker 1 | 1.5 GB | 1.0 | Task execution & streaming processing |
 | Spark Worker 2 | 1.5 GB | 1.0 | Task execution & streaming processing |
 | PostgreSQL | 512 MB | 0.5 | Data warehouse, persistent volume |
 | Node-Red | 512 MB | 0.5 | ✨ MQTT testing, visualization, flow automation |
 | System | ~1 GB | — | OS overhead |
-| **Total** | **~12 GB** | **~5.5 CPU** | **12GB Recommended** |
+| **Total** | **~14.5 GB** | **~5.5 CPU** | **16GB+ Recommended** |
+
+> Spark Master is sized for 5 concurrent `--deploy-mode client` driver JVMs (submit-spark-jobs.sh submits all 5 ingestion jobs, each with `--driver-memory 512m`), which run inside the same container as the Master daemon. If you only run 1-2 jobs at a time, you can lower this back toward 900m-1.5g.
 
 ---
 
@@ -262,7 +266,7 @@ docker compose down && rm -rf ./data/*
 - **Kafka → Spark**: ~500 msg/sec (limited by Spark parallelism)
 - **Spark → PostgreSQL**: ~200–500 rows/sec (JDBC batch limited)
 - **E2E Latency**: 15–30 seconds
-- **Memory Usage**: ~9–10 GB at capacity
+- **Memory Usage**: ~9-10 GB typical, up to ~14.5 GB if all 5 Spark jobs run concurrently (see Resource Allocation)
 - **Disk I/O**: ~10–20 MB/sec
 
 ---

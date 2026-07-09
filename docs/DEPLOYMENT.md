@@ -84,7 +84,7 @@ docker exec kafka kafka-topics --bootstrap-server kafka:9092 \
 
 **Mitigation**:
 ```python
-# In spark-jobs/shared_utils.py
+# In spark-jobs/shared_utils/shared_utils.py
 jdbc_options = {
     "batchsize": 2000,      # Increase batch size
     "numPartitions": 8,     # Increase partition parallelism
@@ -184,7 +184,7 @@ SELECT COUNT(*) FROM iot.weather_data;  -- Returns 0 after 5 minutes
 | MQTT → Kafka bridge not configured | Restart EMQX: `docker compose restart emqx` |
 | Spark job submission failed | Check `docker logs spark-master` |
 | PostgreSQL connection pool exhausted | Reduce Spark parallelism: `--total-executor-cores 1` |
-| Schema mismatch | Verify column names match in `shared_utils.py` |
+| Schema mismatch | Verify column names match in `shared_utils/shared_utils.py` |
 
 ---
 
@@ -305,7 +305,7 @@ docker exec postgres psql -U postgres -d iot_database -c "\
 
 | Cause | Fix |
 |-------|-----|
-| JDBC batch size too small | Increase `batchsize` to 2000 in shared_utils.py |
+| JDBC batch size too small | Increase `batchsize` to 2000 in shared_utils/shared_utils.py |
 | PostgreSQL too busy | Increase `shared_buffers` in docker-compose.yml |
 | Spark shuffle overhead | Reduce partition count in Spark jobs |
 | Network latency | Ensure Docker network is bridge mode (default) |
@@ -376,16 +376,24 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 ### Scale Up (More Data, More Performance)
 
 **Add More Spark Workers**:
-1. Add to `docker-compose.yml`:
+1. Add to `docker-compose.yml`, building from the same `config/spark/Dockerfile`
+   used by spark-master/spark-worker-1/spark-worker-2 (not a different image -
+   it needs the same baked-in Kafka connector + JDBC jars):
    ```yaml
    spark-worker-3:
-     image: bitnami/spark:3.5.0
-     environment:
-       SPARK_MASTER_URL: spark://spark-master:7077
-       SPARK_WORKER_CORES: 2
-       SPARK_WORKER_MEMORY: 2g
+     build:
+       context: .
+       dockerfile: config/spark/Dockerfile
+     command: >
+       bash -c "/opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077"
+     volumes:
+       - ./spark-jobs:/opt/spark-jobs:ro
+       - ./data-spark-worker-3:/tmp/spark-data
+     mem_limit: 1500m
+     memswap_limit: 1500m
+     cpus: '1.0'
    ```
-2. Allocate +2GB memory (total becomes 12GB+)
+2. Allocate +1.5GB memory (total becomes ~17GB+)
 3. Increase partitions: `--total-executor-cores 4`
 
 **Increase Kafka Partitions**:

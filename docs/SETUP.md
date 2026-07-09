@@ -230,14 +230,15 @@ docker exec postgres psql -U postgres -d iot_database -c \
 
 ### Test Spark Job Submission
 ```bash
-# Submit just the weather job
-docker exec spark-master spark-submit \
+# Submit just the weather job (shared_utils.zip ships the shared_utils package
+# to executors via --py-files; scripts/submit-spark-jobs.sh regenerates it
+# automatically if missing or stale)
+docker exec spark-master /opt/spark/bin/spark-submit \
   --master spark://spark-master:7077 \
+  --deploy-mode client \
   --driver-memory 512m \
-  --executor-memory 1g \
-  --executor-cores 1 \
-  --total-executor-cores 2 \
-  /spark-jobs/ingest_weather.py
+  --py-files /opt/spark-jobs/shared_utils.zip \
+  /opt/spark-jobs/ingest_weather.py
 
 # Monitor in Spark UI: http://localhost:8080
 ```

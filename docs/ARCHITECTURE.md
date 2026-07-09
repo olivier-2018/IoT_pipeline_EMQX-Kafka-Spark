@@ -70,8 +70,9 @@ This is a minimalist end-to-end IoT data pipeline designed to run on a **12GB la
 │                                                                  │
 │  Master:                                                         │
 │    • Orchestrates job execution                                  │
+│    • Also hosts client-mode driver JVMs (spark-submit runs here) │
 │    • Port: 7077 (RPC), 8080 (UI)                                 │
-│    • Memory: 512 MB                                              │
+│    • Memory: 4 GB (Master daemon + up to 5 concurrent drivers)   │
 │                                                                  │
 │  Workers (×2):                                                   │
 │    • Execute tasks in parallel                                   │
@@ -148,19 +149,19 @@ Python Generator
 
 ---
 
-## Resource Allocation (12GB Total)
+## Resource Allocation (~13.5GB Total)
 
 | Component | Memory | CPU | Rationale |
 |-----------|--------|-----|-----------|
 | **EMQX** | 2 GB | 0.5 | MQTT broker + Kafka bridge; high message rate |
 | **Kafka** | 2 GB | 1.0 | Single broker; no replication overhead |
-| **Spark Master** | 512 MB | 0.5 | Coordination only; minimal compute |
+| **Spark Master** | 4 GB | 0.5 | Coordination + up to 5 concurrent client-mode driver JVMs |
 | **Spark Worker 1** | 1.5 GB | 1.0 | Task execution + shuffle operations |
 | **Spark Worker 2** | 1.5 GB | 1.0 | Task execution + shuffle operations |
 | **PostgreSQL** | 512 MB | 0.5 | Small schema; indexed queries |
 | **Zookeeper** | 1 GB | 0.5 | Kafka coordination |
 | **System/Docker** | ~1 GB | — | OS + overhead |
-| **Total** | ~11 GB | ~5.0 CPU | **Usable: ~10 GB** (1 GB headroom) |
+| **Total** | ~13.5 GB | ~5.0 CPU | **Recommended: 16GB machine** (2.5 GB headroom) |
 
 ---
 

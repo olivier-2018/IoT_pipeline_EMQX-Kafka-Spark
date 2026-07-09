@@ -17,7 +17,7 @@ htmlcov/
 # IDE
 *.iml
 
-# DB storage
+# Services storage
 data-*/
 
 # secrets
@@ -29,7 +29,6 @@ data-*/
 
 # uv package manager
 .uv/
-uv.lock
 
 # Virtual environments
 *.venv/

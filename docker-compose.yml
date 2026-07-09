@@ -129,12 +129,7 @@ services:
       - ./data-spark-master:/tmp/spark-data
     networks:
       - iot-network
-    # 512m is too tight once client-mode spark-submit runs driver JVMs here
-    # alongside the Master daemon: Spark enforces a ~450MB minimum driver heap
-    # (SparkIllegalArgumentException: INVALID_DRIVER_MEMORY) on top of the
-    # Master's own ~150-200MB footprint. submit-spark-jobs.sh submits all 5
-    # ingestion jobs concurrently (5 x 512m driver-memory + JVM overhead), so
-    # size for that: ~3.3GB for the drivers + ~300-700MB headroom for the Master.
+    # Notes: Mem size for 5 concurrent ingestion jobs: ~3.3GB for the drivers + ~300-700MB headroom for the Master.
     mem_limit: 4g
     memswap_limit: 4g
     cpus: '0.5'
