@@ -172,7 +172,7 @@ iot-pipeline-demo/
 
 | Document | Purpose |
 |----------|---------|
-| [**ARCHITECTURE.md**](docs/ARCHITECTURE.md) | System design, component rationale, data flow diagrams, performance characteristics |
+| [**ARCHITECTURE.md**](docs/ARCHITECTURE.md) | System design, component rationale, data flow diagrams, performance characteristics, **how to view Spark driver/executor logs (file + Spark UI)** |
 | [**SETUP.md**](docs/SETUP.md) | 5-minute quickstart, prerequisites, troubleshooting |
 | [**MQTT_SCHEMAS.md**](docs/MQTT_SCHEMAS.md) | **Complete MQTT message definitions** (JSON schemas for all 5 data types) |
 | [**DATA_SCHEMA.md**](docs/DATA_SCHEMA.md) | PostgreSQL schemas, Kafka topics, data ranges, monitoring queries |

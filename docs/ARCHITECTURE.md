@@ -261,6 +261,64 @@ Python Generator
 - **Spark Worker 1 UI**: http://localhost:8081
 - **Spark Worker 2 UI**: http://localhost:8082
 
+### Viewing Spark Job Logs
+
+Spark logs live in three different places depending on what you're looking for:
+
+**1. Driver logs (the ingest_*.py job itself: Kafka read, JSON parsing, JDBC writes, errors)**
+
+`scripts/submit-spark-jobs.sh` submits each job with `--deploy-mode client`, so the
+driver JVM runs as a `docker exec` process inside the `spark-master` container -
+this is a separate process from the container's own PID 1, so `docker logs
+spark-master` does **not** capture it. The script redirects each job's driver
+output to its own timestamped file on the host instead:
+
+```bash
+ls logs/submit-spark-jobs/
+# 20260709_204305_ingest_weather.log
+# 20260709_204305_ingest_orders.log
+# ...
+
+tail -f logs/submit-spark-jobs/*_ingest_weather.log
+```
+
+**2. Master/Worker daemon logs**
+
+The `spark-master`/`spark-worker-1`/`spark-worker-2` containers run
+`spark-class` directly in the foreground, so their own output goes to the
+container's stdout - view it with `docker logs`, not a file:
+
+```bash
+docker logs -f spark-master
+docker logs -f spark-worker-1
+docker logs -f spark-worker-2
+```
+
+**3. Executor logs, via the Spark UI (stdout/stderr per task attempt)**
+
+This is the most useful place to debug a *running* job, since it shows
+per-executor output live, separately from the driver's own log:
+
+1. Open the **Spark Master UI**: http://localhost:8080
+2. Under "Running Applications" (or "Completed Applications" if it already
+   finished), click the application name (e.g. `WeatherDataIngestion`) - this
+   opens the driver's own Application UI (proxied from port 4040 inside the
+   container).
+3. Go to the **Executors** tab. Each executor row has **stdout** / **stderr**
+   links - click them to view that executor's live log tail (this is where
+   you'll see task-level errors, e.g. JDBC write failures or `from_json`
+   parsing warnings, that don't show up in the driver log).
+4. Alternatively, open a **Worker UI** directly (http://localhost:8081 or
+   :8082) and look under "Running Executors" / "Finished Executors" - each
+   entry also has stdout/stderr links. This is useful once the driver has
+   already exited (its Application UI disappears from the Master UI), since
+   the Worker UI keeps executor log links around longer.
+
+Note: there's no Spark History Server in this setup, so once an application's
+driver process ends, its Application UI (step 2-3 above) becomes unavailable -
+only the Worker UI (step 4) may still have the executor logs, and the driver's
+own log is only available via the log file described in section 1 above.
+
 ### Command-Line Monitoring
 ```bash
 # Monitor resource usage

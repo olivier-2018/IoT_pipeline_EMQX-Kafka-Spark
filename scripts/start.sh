@@ -19,7 +19,7 @@ fi
 
 # Create required data directories if they don't exist
 echo "Step 0: Preparing data directories for persistent volumes..."
-DATA_DIRS=("data-nodered" "data-emqx" "data-postgres" "data-kafka" "data-kafka-ui" "data-zookeeper" "data-spark-master" "data-spark-worker-1" "data-spark-worker-2")
+DATA_DIRS=("data-nodered" "data-emqx" "data-postgres" "data-kafka" "data-kafka-ui" "data-zookeeper" "data-zookeeper-log" "data-spark-master" "data-spark-logs" "data-spark-worker-1" "data-spark-worker-2")
 for dir in "${DATA_DIRS[@]}"; do
     if [ ! -d "$dir" ]; then
         mkdir -p "$dir"
@@ -40,11 +40,38 @@ echo "Step 2: Waiting 20s for services to stabilize..."
 echo ""
 sleep 20
 
+# Verify Kafka/Zookeeper agree on the cluster ID: data-kafka/ and
+# data-zookeeper/ are independent bind-mounted directories that can fall out
+# of sync (e.g. one gets cleared/recreated without the other), which makes
+# Kafka crash-loop with InconsistentClusterIdException.
+if [ -f "data-kafka/meta.properties" ]; then
+    KAFKA_CLUSTER_ID=$(grep '^cluster.id=' data-kafka/meta.properties | cut -d= -f2)
+    ZK_CLUSTER_ID=$(docker exec zookeeper zookeeper-shell localhost:2181 get /cluster/id 2>/dev/null \
+        | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+
+    if [ -n "$KAFKA_CLUSTER_ID" ] && [ -n "$ZK_CLUSTER_ID" ] && [ "$KAFKA_CLUSTER_ID" != "$ZK_CLUSTER_ID" ]; then
+        echo "✗ Error: Kafka/Zookeeper cluster ID mismatch."
+        echo "  data-kafka/meta.properties: $KAFKA_CLUSTER_ID"
+        echo "  Zookeeper /cluster/id:      $ZK_CLUSTER_ID"
+        echo "  Kafka will crash-loop (InconsistentClusterIdException). Fix with:"
+        echo "    docker compose down"
+        echo "    rm -rf data-kafka/* data-zookeeper/* data-zookeeper-log/*"
+        echo "    bash scripts/start.sh"
+        exit 1
+    fi
+fi
+
 # Initializing Kafka topics
 echo "---"
 echo "Step 3: Initializing Kafka topics..."
 echo ""
-bash scripts/init-kafka-topics.sh
+EXISTING_TOPICS=$(docker exec kafka kafka-topics --bootstrap-server kafka:9092 --list 2>/dev/null)
+if [ -n "$EXISTING_TOPICS" ]; then
+    echo "✓ Kafka topics already created:"
+    echo "$EXISTING_TOPICS"
+else
+    bash scripts/init-kafka-topics.sh
+fi
 
 # Initializing EMQX Kafka connector
 echo "---"

@@ -31,23 +31,25 @@ echo ""
 echo "Step 1: Stopping containers..."
 docker compose down 2>/dev/null || true
 
-echo "Step 2: Removing volumes..."
-docker volume rm spark-master-data 2>/dev/null || true
-docker volume rm spark-worker-1-data 2>/dev/null || true
-docker volume rm spark-worker-2-data 2>/dev/null || true
+# All persistent state is bind-mounted into these top-level data-* directories
+# (not named Docker volumes or a nested ./data/ folder) - keep this list in
+# sync with DATA_DIRS in scripts/start.sh.
+DATA_DIRS=("data-nodered" "data-emqx" "data-postgres" "data-kafka" "data-kafka-ui" "data-zookeeper" "data-zookeeper-log" "data-spark-master" "data-spark-logs" "data-spark-worker-1" "data-spark-worker-2")
 
-echo "Step 3: Removing local data directories..."
-rm -rf ./data/* 2>/dev/null || true
-mkdir -p ./data/postgres
+echo "Step 2: Clearing data-* directories..."
+for dir in "${DATA_DIRS[@]}"; do
+    rm -rf "./${dir:?}"/* 2>/dev/null || true
+    mkdir -p "./$dir"
+done
 
 echo ""
-echo "Step 4: Starting fresh containers..."
+echo "Step 3: Starting fresh containers..."
 docker compose up -d
 
-echo "Step 5: Waiting for services to be ready..."
+echo "Step 4: Waiting for services to be ready..."
 sleep 15
 
-echo "Step 6: Initializing Kafka topics..."
+echo "Step 5: Initializing Kafka topics..."
 bash scripts/init-kafka-topics.sh
 
 echo ""

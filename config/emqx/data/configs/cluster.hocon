@@ -9,7 +9,7 @@ actions {
       description = "transfer inventory IoT data to Kafka"
       enable = true
       fallback_actions = []
-      last_modified_at = 1783512899768
+      last_modified_at = 1783621872100
       parameters {
         buffer {
           memory_overload_protection = true
@@ -22,6 +22,14 @@ actions {
           {
             kafka_ext_header_key = clientid
             kafka_ext_header_value = "${clientid}"
+          },
+          {
+            kafka_ext_header_key = topic
+            kafka_ext_header_value = "${topic}"
+          },
+          {
+            kafka_ext_header_key = qos
+            kafka_ext_header_value = "${qos}"
           }
         ]
         kafka_header_value_encode_mode = none
@@ -32,12 +40,7 @@ actions {
         message {
           key = "${clientid}"
           timestamp = "${.timestamp}"
-          value = """~
-            {"topic":"${topic}", 
-            "payload":"${payload}", 
-            "qos":"${qos}", 
-            "retain":"${retain}"
-            }~"""
+          value = "${payload}"
         }
         partition_count_refresh_interval = "60s"
         partition_strategy = random
@@ -58,7 +61,7 @@ actions {
       description = "transfer logistic dispatch data to Kafka"
       enable = true
       fallback_actions = []
-      last_modified_at = 1783512655300
+      last_modified_at = 1783621836219
       parameters {
         buffer {
           memory_overload_protection = true
@@ -71,6 +74,14 @@ actions {
           {
             kafka_ext_header_key = clientid
             kafka_ext_header_value = "${clientid}"
+          },
+          {
+            kafka_ext_header_key = topic
+            kafka_ext_header_value = "${topic}"
+          },
+          {
+            kafka_ext_header_key = qos
+            kafka_ext_header_value = "${qos}"
           }
         ]
         kafka_header_value_encode_mode = none
@@ -81,12 +92,7 @@ actions {
         message {
           key = "${clientid}"
           timestamp = "${.timestamp}"
-          value = """~
-            {"topic":"${topic}", 
-            "payload":"${payload}", 
-            "qos":"${qos}", 
-            "retain":"${retain}"
-            }~"""
+          value = "${payload}"
         }
         partition_count_refresh_interval = "60s"
         partition_strategy = random
@@ -107,7 +113,7 @@ actions {
       description = "transfer new orders to Kafka"
       enable = true
       fallback_actions = []
-      last_modified_at = 1783512268705
+      last_modified_at = 1783621805220
       parameters {
         buffer {
           memory_overload_protection = true
@@ -120,6 +126,14 @@ actions {
           {
             kafka_ext_header_key = clientid
             kafka_ext_header_value = "${clientid}"
+          },
+          {
+            kafka_ext_header_key = topic
+            kafka_ext_header_value = "${topic}"
+          },
+          {
+            kafka_ext_header_key = qos
+            kafka_ext_header_value = "${qos}"
           }
         ]
         kafka_header_value_encode_mode = none
@@ -130,12 +144,7 @@ actions {
         message {
           key = "${clientid}"
           timestamp = "${.timestamp}"
-          value = """~
-            {"topic":"${topic}", 
-            "payload":"${payload}", 
-            "qos":"${qos}", 
-            "retain":"${retain}"
-            }~"""
+          value = "${payload}"
         }
         partition_count_refresh_interval = "60s"
         partition_strategy = random
@@ -156,7 +165,7 @@ actions {
       description = "only used for Node Red demo"
       enable = true
       fallback_actions = []
-      last_modified_at = 1783513789531
+      last_modified_at = 1783621891134
       parameters {
         buffer {
           memory_overload_protection = true
@@ -179,11 +188,7 @@ actions {
         message {
           key = "${clientid}"
           timestamp = "${.timestamp}"
-          value = """~
-            {"topic":"${topic}", 
-            "payload":"${payload}", 
-            "qos":"${qos}"
-            }~"""
+          value = "${payload}"
         }
         partition_count_refresh_interval = "60s"
         partition_strategy = random
@@ -204,7 +209,7 @@ actions {
       description = "transfer user-events IoT data to Kafka"
       enable = true
       fallback_actions = []
-      last_modified_at = 1783513275963
+      last_modified_at = 1783621773941
       parameters {
         buffer {
           memory_overload_protection = true
@@ -217,6 +222,14 @@ actions {
           {
             kafka_ext_header_key = clientid
             kafka_ext_header_value = "${clientid}"
+          },
+          {
+            kafka_ext_header_key = topic
+            kafka_ext_header_value = "${topic}"
+          },
+          {
+            kafka_ext_header_key = qos
+            kafka_ext_header_value = "${qos}"
           }
         ]
         kafka_header_value_encode_mode = none
@@ -227,12 +240,7 @@ actions {
         message {
           key = "${clientid}"
           timestamp = "${.timestamp}"
-          value = """~
-            {"topic":"${topic}", 
-            "payload":"${payload}", 
-            "qos":"${qos}", 
-            "retain":"${retain}"
-            }~"""
+          value = "${payload}"
         }
         partition_count_refresh_interval = "60s"
         partition_strategy = random
@@ -253,7 +261,7 @@ actions {
       description = "transfer weather IoT data to Kafka"
       enable = true
       fallback_actions = []
-      last_modified_at = 1783511922167
+      last_modified_at = 1783621615791
       parameters {
         buffer {
           memory_overload_protection = true
@@ -266,6 +274,14 @@ actions {
           {
             kafka_ext_header_key = clientid
             kafka_ext_header_value = "${clientid}"
+          },
+          {
+            kafka_ext_header_key = topic
+            kafka_ext_header_value = "${topic}"
+          },
+          {
+            kafka_ext_header_key = qos
+            kafka_ext_header_value = "${qos}"
           }
         ]
         kafka_header_value_encode_mode = none
@@ -276,12 +292,7 @@ actions {
         message {
           key = "${clientid}"
           timestamp = "${.timestamp}"
-          value = """~
-            {"topic":"${topic}", 
-            "payload":"${payload}", 
-            "qos":"${qos}", 
-            "retain":"${retain}"
-            }~"""
+          value = "${payload}"
         }
         partition_count_refresh_interval = "60s"
         partition_strategy = random
@@ -578,7 +589,8 @@ rule_engine {
       ]
       description = ""
       enable = true
-      metadata {created_at = 1783513803614, last_modified_at = 1783513803614}
+      metadata {last_modified_at = 1783621893265}
+      name = ""
       sql = """~
         SELECT
           *
@@ -591,7 +603,8 @@ rule_engine {
       ]
       description = ""
       enable = true
-      metadata {created_at = 1783512911310, last_modified_at = 1783512911310}
+      metadata {last_modified_at = 1783621874850}
+      name = ""
       sql = """~
         SELECT
           topic, payload, qos, retain
@@ -604,7 +617,8 @@ rule_engine {
       ]
       description = ""
       enable = true
-      metadata {created_at = 1783512663072, last_modified_at = 1783512663072}
+      metadata {last_modified_at = 1783621838469}
+      name = ""
       sql = """~
         SELECT
           topic, payload, qos, retain
@@ -617,7 +631,8 @@ rule_engine {
       ]
       description = ""
       enable = true
-      metadata {created_at = 1783512295082, last_modified_at = 1783512295082}
+      metadata {last_modified_at = 1783621810334}
+      name = ""
       sql = """~
         SELECT
           topic, payload, qos, retain
@@ -630,7 +645,8 @@ rule_engine {
       ]
       description = ""
       enable = true
-      metadata {created_at = 1783513285164, last_modified_at = 1783513285164}
+      metadata {last_modified_at = 1783621775927}
+      name = ""
       sql = """~
         SELECT
           topic, payload, qos, retain
@@ -643,7 +659,8 @@ rule_engine {
       ]
       description = ""
       enable = true
-      metadata {created_at = 1783511937653, last_modified_at = 1783511937653}
+      metadata {last_modified_at = 1783621620465}
+      name = ""
       sql = """~
         SELECT
           topic, payload, qos, retain

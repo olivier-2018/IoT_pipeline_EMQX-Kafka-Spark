@@ -79,6 +79,10 @@ services:
       ZOOKEEPER_HEAP_OPTS: "-Xmx512m"
     volumes:
       - ./data-zookeeper:/var/lib/zookeeper/data
+      # dataLogDir (transaction log) must be persisted too, or it lands on an
+      # anonymous volume that gets discarded on every container recreation -
+      # losing the /cluster/id znode and desyncing Kafka's cluster ID.
+      - ./data-zookeeper-log:/var/lib/zookeeper/log
     networks:
       - iot-network
     mem_limit: 1g
@@ -124,8 +128,10 @@ services:
       - "8080:8080"
     environment:
       - SPARK_NO_DAEMONIZE=true
+      - SPARK_PUBLIC_DNS=localhost
     volumes:
       - ./spark-jobs:/opt/spark-jobs:ro
+      - ./data-spark-logs:/opt/spark/logs
       - ./data-spark-master:/tmp/spark-data
     networks:
       - iot-network
@@ -151,15 +157,29 @@ services:
       - "8081:8081"   # Worker UI
     environment:
       - SPARK_NO_DAEMONIZE=true
+      - SPARK_PUBLIC_DNS=localhost
+      # Without this, the Worker's default core count comes from the JVM's
+      # cgroup-aware Runtime.availableProcessors(), which reads the `cpus:`
+      # quota below (1.0 -> 1 core) - too few to run 5 concurrent streaming
+      # jobs. These are I/O-bound (waiting on Kafka/Postgres), so more
+      # scheduling slots than the CPU quota is fine.
+      - SPARK_WORKER_CORES=3
+      # Default worker memory reports as just 1024m, and Spark's default 1g
+      # executor-memory would let a single executor consume the whole thing -
+      # blocking every other concurrent job regardless of free cores. Sized
+      # for ~3 executors@768m (Spark enforces a ~450MB executor-memory floor)
+      # with margin below the container mem_limit for worker daemon overhead.
+      - SPARK_WORKER_MEMORY=2500m
     volumes:
       - ./spark-jobs:/opt/spark-jobs:ro
+      - ./data-spark-logs:/opt/spark/logs
       - ./data-spark-worker-1:/tmp/spark-data
     depends_on:
       - spark-master
     networks:
       - iot-network
-    mem_limit: 1500m
-    memswap_limit: 1500m
+    mem_limit: 3000m
+    memswap_limit: 3000m
     cpus: '1.0'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081"]
@@ -179,15 +199,19 @@ services:
       - "8082:8081"
     environment:
       - SPARK_NO_DAEMONIZE=true
+      - SPARK_PUBLIC_DNS=localhost
+      - SPARK_WORKER_CORES=3
+      - SPARK_WORKER_MEMORY=2500m
     volumes:
       - ./spark-jobs:/opt/spark-jobs:ro
+      - ./data-spark-logs:/opt/spark/logs
       - ./data-spark-worker-2:/tmp/spark-data
     depends_on:
       - spark-master
     networks:
       - iot-network
-    mem_limit: 1500m
-    memswap_limit: 1500m
+    mem_limit: 3000m
+    memswap_limit: 3000m
     cpus: '1.0'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082"]
@@ -254,10 +278,3 @@ networks:
     driver: bridge
     external: false
 
-# volumes:
-#   emqx-data:
-#   spark-master-data:
-#   spark-worker-1-data:
-#   spark-worker-2-data:
-#   node_red_data:
-  
