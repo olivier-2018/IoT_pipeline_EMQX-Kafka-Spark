@@ -13,7 +13,7 @@ dependencies = [
     "faker==21.0.0",
 
     # Spark Streaming & Data Processing
-    "pyspark==3.5.0",
+    "pyspark==3.5.2",
 
     # Database Connectivity
     "psycopg2-binary==2.9.9",
