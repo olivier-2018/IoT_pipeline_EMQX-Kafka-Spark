@@ -2,7 +2,9 @@
 
 A minimalist **end-to-end IoT data pipeline** designed to run on a **12GB laptop**. 
 
-Demonstrates real-time ingestion of mock IoT data (weather, sales, logistics, inventory, user events) from **Python generators** → **MQTT broker (EMQX)** → **Kafka** → **Spark cluster** → **PostgreSQL**.
+Demonstrates real-time ingestion of mock IoT data (weather, sales, logistics, inventory, user events) from **Python generators** → **MQTT broker (EMQX)** → **Kafka** → **Spark Structured Streaming** → **PostgreSQL**.
+
+Each Spark job (`spark-structured-streaming-jobs/ingest_*.py`) is a **long-running streaming query**, not a one-shot batch job: once submitted, it keeps running indefinitely, continuously processing new messages as they land in Kafka, until you stop it.
 
 ---
 
@@ -64,18 +66,35 @@ docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 \
 
 ### 5. Monitor live MQTT messages:
 
+The `emqx` image has no `mosquitto_sub`/`mosquitto_pub` binaries — install
+`mosquitto-clients` on the host instead (`sudo apt install mosquitto-clients`),
+or use the Dockerized alternative (see [docs/SETUP.md](docs/SETUP.md) "Test MQTT → EMQX"):
 ```bash
 # In one terminal, subscribe to MQTT
-docker exec emqx mosquitto_sub -h localhost -t "devices/weather/+" -v
+mosquitto_sub -h localhost -t "devices/weather/+" -v
 
 # In another terminal, publish test message
-docker exec emqx mosquitto_pub -h localhost -t "devices/weather/test" -m '{"test":"data","timestamp":1234567890000}'
+mosquitto_pub -h localhost -t "devices/weather/test" -m '{"test":"data","timestamp":1234567890000}'
 ```
 
 ### 6. Submit Spark Jobs (another terminal)
 ```bash
 bash scripts/submit-spark-jobs.sh
 ```
+Note: these are Spark **Structured Streaming** jobs, not one-off batch jobs — each
+one starts, then runs forever in the background, continuously picking up new
+Kafka messages as they arrive (`query.awaitTermination()` never returns on its
+own). `submit-spark-jobs.sh` submits all 5 ingestion jobs concurrently by
+default, each capped to 1 executor core/768MB (`--total-executor-cores 1
+--executor-memory 768m`) — the 2-worker cluster advertises 6 core slots total
+(`SPARK_WORKER_CORES=3` each), so all 5 fit with 1 slot to spare. Submission
+takes ~30-40s for all 5 to register, since their driver JVMs contend for
+`spark-master`'s own `cpus: 0.5` quota on startup — this is expected, not a hang.
+Driver output goes to `logs/submit-spark-jobs/`; check a job is alive via the
+[Spark Master UI](http://localhost:8080) or `docker exec spark-master ps aux | grep SparkSubmit`.
+To stop a job, kill its driver process (`docker exec spark-master pkill -f ingest_weather.py`, etc.) —
+stopping/restarting the containers also stops it, since the driver JVM runs inside `spark-master`.
+See [TODO.md](TODO.md) for a known issue that can affect `ingest_logistics.py`.
 
 ### 7. View Results & Dashboards
 ```bash
@@ -102,9 +121,9 @@ Python Generators (5 types)
 EMQX Broker
   ↓ (Kafka Bridge)
 Kafka (5 topics, 2 partitions each)
-  ↓ (Streaming Read)
+  ↓ (Structured Streaming, continuous - not a scheduled batch read)
 Spark Cluster (1 master + 2 workers)
-  ↓ (JDBC Write)
+  ↓ (JDBC Write, per micro-batch via foreachBatch)
 PostgreSQL (5 tables, fully indexed)
 ```
 
@@ -145,7 +164,7 @@ iot-pipeline-demo/
 │   ├── user_events_generator.py    # User events (200–500/min)
 │   ├── main.py                     # Orchestrator (parallel generators, throttled)
 │   └── requirements.txt
-├── spark-jobs/                     # Spark ingestion & transformation
+├── spark-structured-streaming-jobs/ # Spark ingestion & transformation (streaming; spark-batch-jobs/ may follow later)
 │   ├── shared_utils/                # Factories, schemas, JDBC pooling
 │   │   └── shared_utils.py
 │   ├── shared_utils.zip             # Prebuilt --py-files archive of shared_utils/
@@ -185,7 +204,7 @@ iot-pipeline-demo/
 
 ✅ **5 Mock Data Types**: Weather, sales orders, logistics, inventory, user events  
 ✅ **EMQX + Kafka**: MQTT broker with native Kafka bridge integration  
-✅ **Spark Cluster**: 1 master + 2 workers on Docker with micro-batch streaming  
+✅ **Spark Cluster**: 1 master + 2 workers running long-lived Spark Structured Streaming queries (continuous, not scheduled batch jobs)  
 ✅ **PostgreSQL**: Fully indexed schema with 5 tables, persistent volumes  
 ✅ **Node-Red**: ✨ MQTT testing, visualization, and flow automation dashboard  
 ✅ **Minimalistic**: Optimized for 12GB laptop (aggressive resource limits)  
@@ -214,12 +233,6 @@ bash scripts/reset.sh
 # Verify health
 bash scripts/health-check.sh
 python3 monitoring/health_check.py
-
-# View web dashboards
-# Node-Red: http://localhost:1880
-# EMQX: http://localhost:18083 (admin/public)
-# Spark: http://localhost:8080
-# Kafka UI: http://localhost:8888
 
 # Query data
 docker exec postgres psql -U postgres -d iot_database -c \
@@ -288,6 +301,7 @@ docker compose down && rm -rf ./data/*
 - ⚠️ No monitoring/alerting (can add Prometheus later)
 - ⚠️ No TLS/auth (demo-only setup)
 - ⚠️ PostgreSQL single node (no failover)
+- ⚠️ JDBC writes aren't idempotent against checkpoint replay/task retry — see [TODO.md](TODO.md) for details and current status
 
 ---
 
@@ -308,9 +322,9 @@ This project demonstrates real-world IoT pipeline architecture using open-source
 - See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for tuning & monitoring
 - See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for local testing & development
 
-## Acknoledgement
+## Acknowledgement
 
 [EMQX setup](https://www.youtube.com/watch?v=Xqdg3rUSYRc)  
 [EQMX Kafka integration Doc](https://docs.emqx.com/en/emqx/latest/data-integration/data-bridge-kafka.html)  
-
+[Spark UI introduction](https://www.youtube.com/watch?v=MygFqen8VsM)
 

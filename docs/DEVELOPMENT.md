@@ -126,7 +126,7 @@ spark.stop()
 ### Run the Test
 
 ```bash
-cd spark-jobs
+cd spark-structured-streaming-jobs
 python3 test_local_spark.py
 ```
 
@@ -607,7 +607,7 @@ self.generators = {
 ```
 
 ### Step 3: Create Spark Job
-Create `spark-jobs/ingest_machine_metrics.py`:
+Create `spark-structured-streaming-jobs/ingest_machine_metrics.py`:
 
 ```python
 def main():

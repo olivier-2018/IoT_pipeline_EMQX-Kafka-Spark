@@ -49,6 +49,7 @@ services:
       KAFKA_LOG_RETENTION_BYTES: 536870912  # 512 MB per topic
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
       KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_COMPRESSION_TYPE: gzip
       KAFKA_HEAP_OPTS: "-Xmx2g -Xms1g"
     volumes:
@@ -130,7 +131,7 @@ services:
       - SPARK_NO_DAEMONIZE=true
       - SPARK_PUBLIC_DNS=localhost
     volumes:
-      - ./spark-jobs:/opt/spark-jobs:ro
+      - ./spark-structured-streaming-jobs:/opt/spark-structured-streaming-jobs:ro
       - ./data-spark-logs:/opt/spark/logs
       - ./data-spark-master:/tmp/spark-data
     networks:
@@ -171,7 +172,7 @@ services:
       # with margin below the container mem_limit for worker daemon overhead.
       - SPARK_WORKER_MEMORY=2500m
     volumes:
-      - ./spark-jobs:/opt/spark-jobs:ro
+      - ./spark-structured-streaming-jobs:/opt/spark-structured-streaming-jobs:ro
       - ./data-spark-logs:/opt/spark/logs
       - ./data-spark-worker-1:/tmp/spark-data
     depends_on:
@@ -203,7 +204,7 @@ services:
       - SPARK_WORKER_CORES=3
       - SPARK_WORKER_MEMORY=2500m
     volumes:
-      - ./spark-jobs:/opt/spark-jobs:ro
+      - ./spark-structured-streaming-jobs:/opt/spark-structured-streaming-jobs:ro
       - ./data-spark-logs:/opt/spark/logs
       - ./data-spark-worker-2:/tmp/spark-data
     depends_on:

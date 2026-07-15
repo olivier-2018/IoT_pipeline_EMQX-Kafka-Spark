@@ -84,7 +84,7 @@ docker exec kafka kafka-topics --bootstrap-server kafka:9092 \
 
 **Mitigation**:
 ```python
-# In spark-jobs/shared_utils/shared_utils.py
+# In spark-structured-streaming-jobs/shared_utils/shared_utils.py
 jdbc_options = {
     "batchsize": 2000,      # Increase batch size
     "numPartitions": 8,     # Increase partition parallelism
@@ -159,18 +159,23 @@ SELECT COUNT(*) FROM iot.weather_data;  -- Returns 0 after 5 minutes
 1. Are data generators running?
    docker ps | grep -E "emqx|kafka|spark|postgres"
    
-2. Are MQTT messages being published?
-   docker exec emqx mosquitto_sub -h localhost -t "devices/+/+" &
+2. Are MQTT messages being published? (the emqx image has no mosquitto_sub -
+   install mosquitto-clients on the host, or see SETUP.md "Test MQTT → EMQX")
+   mosquitto_sub -h localhost -t "devices/+/+" &
    
 3. Are Kafka topics receiving messages?
    docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 \
      --topic iot-weather-data --max-messages 1
    
 4. Are Spark jobs running?
-   docker logs spark-master | grep "WeatherDataIngestion"
+   docker exec spark-master curl -s http://localhost:8080/json/ | python3 -c \
+     "import json,sys; [print(a['name'],a['state']) for a in json.load(sys.stdin)['activeapps']]"
    
-5. Are there Spark errors?
-   docker logs spark-worker-1 | grep ERROR
+5. Are there Spark errors? --deploy-mode client driver output does NOT go to
+   `docker logs spark-master` (the driver is a separate docker exec process) -
+   check logs/submit-spark-jobs/*.log instead. Executor errors are on the
+   worker, not in `docker logs spark-worker-1` either - check
+   /opt/spark/work/<app-id>/<executor-id>/stderr inside the worker container.
    
 6. Can Spark connect to PostgreSQL?
    docker exec spark-master nc -zv postgres 5432
@@ -182,7 +187,7 @@ SELECT COUNT(*) FROM iot.weather_data;  -- Returns 0 after 5 minutes
 |-------|-----|
 | MQTT generators not started | `cd mqtt-generators && python main.py` |
 | MQTT → Kafka bridge not configured | Restart EMQX: `docker compose restart emqx` |
-| Spark job submission failed | Check `docker logs spark-master` |
+| Spark job submission failed | Check `logs/submit-spark-jobs/*.log`, not `docker logs spark-master` |
 | PostgreSQL connection pool exhausted | Reduce Spark parallelism: `--total-executor-cores 1` |
 | Schema mismatch | Verify column names match in `shared_utils/shared_utils.py` |
 
@@ -190,22 +195,33 @@ SELECT COUNT(*) FROM iot.weather_data;  -- Returns 0 after 5 minutes
 
 ### Issue: "Spark Job Fails with JDBC Error"
 
-**Symptoms**:
+**Symptom A**:
+```
+ERROR: column "order_id" is of type uuid but expression is of type character varying
+```
+**Cause**: Spark has no native UUID type - `order_id`/`shipment_id` are `StringType()`
+in the Spark schema, and the Postgres JDBC driver won't implicitly cast a bound
+`varchar` parameter to the `uuid` columns.
+**Fixed** (2026-07-15): `get_jdbc_options()` in
+`spark-structured-streaming-jobs/shared_utils/shared_utils.py` now sets
+`"stringtype": "unspecified"`, which tells the driver to let Postgres infer the
+parameter type from the target column instead of binding it as an explicit `varchar`.
+
+**Symptom B**:
 ```
 org.postgresql.util.PSQLException: ERROR: duplicate key value violates unique constraint
 ```
-
-**Cause**: Duplicate records being inserted (not idempotent)
-
-**Solution**:
-```python
-# In ingest_weather.py, use upsert instead of append:
-batch_df.write \
-    .format("jdbc") \
-    .options(**jdbc_options) \
-    .mode("ignore")  # Skip duplicates instead of append
-    .save()
-```
+**Cause**: Duplicate records being inserted - genuinely **not idempotent**, and
+**not fixed** by switching to `.mode("ignore")` as this section previously
+suggested. That mode only applies when the target table doesn't exist yet
+(it means "if the table exists, do nothing at all" - i.e. it would silently
+skip writing the *entire* micro-batch, not just the conflicting row, since
+these tables already exist from `init.sql`). See [TODO.md](../TODO.md) for
+the full root cause (Spark's per-partition JDBC writes aren't atomic across a
+micro-batch, so a partial failure can leave some rows committed; on replay -
+whether from a checkpoint-triggered restart or a Spark task retry - those
+same rows collide) and the proposed real fix (`foreachPartition` + raw
+`INSERT ... ON CONFLICT`, or stage-then-merge).
 
 ---
 
@@ -387,7 +403,7 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
      command: >
        bash -c "/opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077"
      volumes:
-       - ./spark-jobs:/opt/spark-jobs:ro
+       - ./spark-structured-streaming-jobs:/opt/spark-structured-streaming-jobs:ro
        - ./data-spark-worker-3:/tmp/spark-data
      mem_limit: 1500m
      memswap_limit: 1500m

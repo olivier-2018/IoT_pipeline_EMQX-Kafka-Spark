@@ -26,6 +26,15 @@ for dir in "${DATA_DIRS[@]}"; do
         echo "  ✓ Created: $dir"
     fi
 done
+
+# The spark-master/spark-worker images run as the baked-in "spark" user (uid 185),
+# which doesn't match the host user owning these bind mounts - without this, the
+# containers can read but never write (logs, streaming checkpoints) and fail silently
+# or with a "Permission denied" mkdir error.
+SPARK_DATA_DIRS=("data-spark-master" "data-spark-logs" "data-spark-worker-1" "data-spark-worker-2")
+for dir in "${SPARK_DATA_DIRS[@]}"; do
+    chmod 777 "$dir"
+done
 echo ""
 
 # Start Docker services

@@ -3,7 +3,7 @@ FROM apache/spark:3.5.0
 
 USER root
 
-# zip is needed by scripts/submit-spark-jobs.sh to package spark-jobs/shared_utils
+# zip is needed by scripts/submit-spark-jobs.sh to package spark-structured-streaming-jobs/shared_utils
 # for distribution to executors via --py-files
 RUN apt-get update && apt-get install -y \
     curl \

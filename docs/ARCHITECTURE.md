@@ -79,19 +79,29 @@ This is a minimalist end-to-end IoT data pipeline designed to run on a **12GB la
 │    • Ports: 8081, 8082 (UI)                                      │
 │    • Memory: 1.5GB each                                          │
 │                                                                  │
-│  Spark Jobs (Streaming):                                         │
+│  Spark Jobs (Structured Streaming - long-running, never exit):   │
 │    • ingest_weather.py       → validates, transforms → postgres  │
 │    • ingest_orders.py        → enrichment, dedup → postgres      │
 │    • ingest_logistics.py     → GPS to POINT → postgres           │
 │    • ingest_inventory.py     → aggregation → postgres            │
 │    • ingest_user_events.py   → windowed agg → postgres           │
 │                                                                   │
-│  Each job:                                                       │
-│    • Reads from Kafka topic (earliest from latest offset)        │
+│  Each job, once submitted:                                       │
+│    • Opens a spark.readStream against its Kafka topic and blocks │
+│      on query.awaitTermination() - it does not process a fixed   │
+│      dataset and exit; it runs indefinitely until killed          │
+│    • Starts from startingOffsets=latest (ignores backlog          │
+│      predating the job) and continuously picks up new messages   │
+│      as they land in Kafka, batch after batch                    │
+│    • Internally still executes as a sequence of micro-batches     │
+│      (Structured Streaming's execution model), but there is no    │
+│      fixed schedule/cron trigger - a new micro-batch fires as     │
+│      soon as the previous one finishes and new data is available │
 │    • Validates schema and data ranges                            │
 │    • Transforms/enriches data                                    │
-│    • Writes micro-batches to PostgreSQL                          │
-│    • Batch size: 1000 records                                    │
+│    • Writes each micro-batch to PostgreSQL via foreachBatch       │
+│    • Progress (Kafka offsets) is tracked in a checkpoint          │
+│      directory, not in Kafka consumer groups                     │
 └──────────────────────────────────────────────────────────────────┘
                             ↓
                   (JDBC Connection Pool)
@@ -200,13 +210,21 @@ Python Generator
 - ✅ Simpler operational model
 - ⚠️ Trade-off: no redundancy (acceptable for demo)
 
-### 3. **Spark Micro-Batch (not Streaming)**
-- ✅ Lower memory overhead than Spark Structured Streaming
-- ✅ Easier to debug (batch boundaries clear)
-- ✅ Simpler error recovery (just rerun batch)
-- ✅ Native PostgreSQL JDBC integration (no custom sinks)
-- ❌ Slightly higher latency (2–5 sec per batch)
-- ⚠️ Not true streaming but sufficient for demo
+### 3. **Spark Structured Streaming (long-running, not scheduled batch jobs)**
+Each `ingest_*.py` job is a genuine Spark Structured Streaming query:
+`spark.readStream.format("kafka")...writeStream.foreachBatch(...).start()`,
+followed by `query.awaitTermination()`. Once submitted, the job **runs
+forever** — it does not process a snapshot of data and exit like a cron/batch
+job would. It continuously consumes new Kafka messages as they arrive and
+writes them to PostgreSQL, one micro-batch at a time, for as long as the
+process stays alive (until you kill it or the container stops).
+- ✅ Continuous, low-latency ingestion — no need to re-trigger a batch job on a schedule
+- ✅ Exactly-once-ish offset tracking via Spark's own checkpoint directory (not Kafka consumer-group commits)
+- ✅ Native PostgreSQL JDBC integration via `foreachBatch` (no custom sinks)
+- ✅ Automatically resumes from the last committed checkpoint offset after a restart (as long as the checkpoint directory persists — see [Known Limitations](#known-limitations))
+- ⚠️ "Micro-batch" here refers to Structured Streaming's internal execution unit, not a scheduled batch job — there's no fixed interval; the next micro-batch starts as soon as the previous one finishes and new data exists
+- ⚠️ A job with no data arriving (generators stopped) just idles — this is normal, not a hang
+- ⚠️ Since `startingOffsets=latest`, restarting a job with a fresh/lost checkpoint skips any backlog produced while it was down
 
 ### 4. **PostgreSQL Single Node**
 - ✅ Minimal footprint (512 MB)
@@ -242,9 +260,10 @@ Python Generator
 
 ### Latency
 - MQTT publish → Kafka: **50–100 ms**
-- Kafka → Spark reads: **5–10 sec** (batch interval)
+- Kafka → Spark reads: **5–10 sec** (no fixed trigger interval is configured, so this reflects typical micro-batch cadence under current load, not a scheduled polling interval)
 - Spark transforms → PostgreSQL write: **2–5 sec**
 - **Total end-to-end**: **~15–30 seconds**
+- These numbers only apply while the streaming query is running continuously; there's no separate "batch job" to schedule or wait on
 
 ### Storage
 - Kafka (1 day retention): ~2.5 GB (5 topics × 512 MB)
@@ -372,9 +391,10 @@ docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 \
 1. **No Data Replication**: Kafka RF=1; data loss on broker crash
 2. **No Spark HA**: Single master; worker loss = partial job failure
 3. **No Monitoring**: No Prometheus/Grafana (can add later)
-4. **Limited Error Handling**: Bad data dropped silently (can add dead-letter queue)
+4. **Fail-fast PostgreSQL writes**: a JDBC write error in any `foreachBatch` call now crashes that job's streaming query (it re-raises rather than swallowing the exception) instead of silently dropping the batch - correct for not losing data unnoticed, but means an operator has to notice the job died and resubmit it; no dead-letter queue or automatic retry
 5. **No Authentication**: EMQX/Kafka/Postgres all open (demo only)
 6. **Single PostgreSQL**: No failover; node loss = data unavailable
+7. **JDBC writes are not idempotent against retry/replay**: combined with limitation 4, a partially-failed micro-batch can leave some rows already committed to Postgres, then collide with themselves as duplicate-key errors when the checkpoint replays that batch (on restart) or Spark retries a task within it. Tables with a natural-key primary key (`sales_orders`, `logistics_shipments`) crash loudly on this; `weather_data`/`inventory_changes`/`user_events` have no such constraint and would insert silent duplicates instead. See [TODO.md](../TODO.md) for a concrete reproduction and the proposed upsert-based fix.
 
 ---
 

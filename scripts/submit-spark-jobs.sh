@@ -1,15 +1,15 @@
 #!/bin/bash
 # Submit Spark Jobs to Cluster
-# Ships spark-jobs/shared_utils.zip to executors via --py-files and submits jobs
+# Ships spark-structured-streaming-jobs/shared_utils.zip to executors via --py-files and submits jobs
 
 set -e
 
 SPARK_MASTER="spark://spark-master:7077"
-CONTAINER_JOBS_DIR="/opt/spark-jobs"
+CONTAINER_JOBS_DIR="/opt/spark-structured-streaming-jobs"
 SHARED_UTILS_ZIP="$CONTAINER_JOBS_DIR/shared_utils.zip"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOST_JOBS_DIR="$SCRIPT_DIR/../spark-jobs"
+HOST_JOBS_DIR="$SCRIPT_DIR/../spark-structured-streaming-jobs"
 HOST_SHARED_UTILS_ZIP="$HOST_JOBS_DIR/shared_utils.zip"
 HOST_SHARED_UTILS_SRC="$HOST_JOBS_DIR/shared_utils/shared_utils.py"
 
@@ -51,14 +51,11 @@ echo "✓ spark-master container is running"
 sleep 2
 
 # Submit all Spark jobs
-# jobs=(
-#     "ingest_weather.py"
-#     "ingest_orders.py"
-#     "ingest_logistics.py"
-#     "ingest_inventory.py"
-#     "ingest_user_events.py"
-# )
 jobs=(
+    "ingest_weather.py"
+    "ingest_orders.py"
+    "ingest_logistics.py"
+    "ingest_inventory.py"
     "ingest_user_events.py"
 )
 

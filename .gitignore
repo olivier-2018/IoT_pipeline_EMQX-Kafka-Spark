@@ -26,6 +26,7 @@ data-*/
 
 # logs and tmp files
 *.log
+TODO.md
 
 # uv package manager
 .uv/

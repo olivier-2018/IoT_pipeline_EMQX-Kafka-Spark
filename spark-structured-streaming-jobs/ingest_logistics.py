@@ -24,10 +24,7 @@ def main():
         kafka_df = (
             spark.readStream
             .format("kafka")
-            .option("kafka.bootstrap.servers", "kafka:9092")
-            .option("subscribe", "iot-logistics-dispatch")
-            .option("startingOffsets", "latest")
-            .option("failOnDataLoss", "false")
+            .options(**KafkaConfig.get_kafka_options("iot-logistics-dispatch"))
             .load()
         )
 
@@ -61,30 +58,35 @@ def main():
         # Write to PostgreSQL in micro-batches
         def write_to_postgres(batch_df, batch_id):
             """Write batch to PostgreSQL"""
-            if batch_df.count() == 0:
+            count = batch_df.count()
+            if count == 0:
                 logger.info(f"[Batch {batch_id}] No data to write")
                 return
 
+            DataValidator.validate_required_fields(
+                batch_df, ["shipment_id", "order_id", "shipment_status"]
+            )
+
             jdbc_options = SparkSessionFactory.get_jdbc_options("logistics_shipments")
-            
+
             try:
                 batch_df.write \
                     .format("jdbc") \
                     .options(**jdbc_options) \
                     .mode("append") \
                     .save()
-                
-                count = batch_df.count()
+
                 logger.info(f"[Batch {batch_id}] ✓ Wrote {count} logistics records to PostgreSQL")
             except Exception as e:
                 logger.error(f"[Batch {batch_id}] Error writing to PostgreSQL: {e}")
+                raise
 
         # Start streaming
         query = (
             transformed_df
             .writeStream
             .foreachBatch(write_to_postgres)
-            .option("checkpointLocation", "/tmp/logistics_checkpoint")
+            .option("checkpointLocation", "/tmp/spark-data/checkpoints/logistics")
             .start()
         )
 

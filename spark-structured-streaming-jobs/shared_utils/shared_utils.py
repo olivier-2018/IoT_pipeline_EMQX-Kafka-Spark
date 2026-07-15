@@ -69,6 +69,14 @@ class SparkSessionFactory:
             "numPartitions": "4",
             "maxNumPartitions": "8",
             "isolationLevel": "READ_UNCOMMITTED",
+            # Spark has no native UUID type, so order_id/shipment_id are written as
+            # StringType. Without this, the Postgres JDBC driver binds them as an
+            # explicit varchar parameter and the server rejects the implicit cast to
+            # the uuid columns (sales_orders.order_id, logistics_shipments.shipment_id/
+            # order_id) with "column is of type uuid but expression is of type character
+            # varying". This tells the driver to leave the parameter type unspecified
+            # so Postgres infers it from the target column instead.
+            "stringtype": "unspecified",
         }
 
 

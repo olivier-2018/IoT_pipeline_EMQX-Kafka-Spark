@@ -307,9 +307,12 @@ Invalid messages are **silently dropped** (no dead-letter queue in demo version)
 
 ### Publish Test Message
 
+The `emqx` image has no `mosquitto_pub`/`mosquitto_sub` binaries - install
+`mosquitto-clients` on the host (`sudo apt install mosquitto-clients`), or use
+the Dockerized alternative (see [SETUP.md](SETUP.md) "Test MQTT → EMQX"):
 ```bash
 # Test weather message
-docker exec emqx mosquitto_pub -h localhost -t "devices/weather/data" \
+mosquitto_pub -h localhost -t "devices/weather/data" \
   -m '{"device_id":"weather-sensor-test","temperature":25.0,"humidity":50,"pressure":1013.25,"timestamp":'$(date +%s)'000}'
 
 # List MQTT messages in Kafka
@@ -321,7 +324,7 @@ docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 \
 
 ```bash
 # Watch MQTT messages in real-time
-docker exec emqx mosquitto_sub -h localhost -t "devices/+" -v
+mosquitto_sub -h localhost -t "devices/+" -v
 
 # Monitor Kafka topic partitions
 docker exec kafka kafka-topics --bootstrap-server kafka:9092 \
