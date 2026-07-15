@@ -22,7 +22,7 @@ dependencies = [
     "confluent-kafka==2.3.0",
 
     # Configuration & HTTP
-    "python-dotenv==1.0.0",
+    "python-dotenv==1.2.2",
     "requests==2.31.0",
 ]
 
