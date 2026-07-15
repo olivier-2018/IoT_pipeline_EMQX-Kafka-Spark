@@ -41,7 +41,29 @@ bash scripts/start.sh
 
 ```
 
-### 2. Start MQTT Generators (new terminal)
+### 2. Submit Spark Jobs (new terminal)
+```bash
+bash scripts/submit-spark-jobs.sh
+```
+Note: these are Spark **Structured Streaming** jobs, not one-off batch jobs — each
+one starts, then runs forever in the background, continuously picking up new
+Kafka messages as they arrive (`query.awaitTermination()` never returns on its
+own). Submitting them before the generators are running is deliberate: each job
+uses `startingOffsets=latest`, so it only ever sees messages published *after*
+it started — start it first and it won't miss anything once the generators kick in.
+`submit-spark-jobs.sh` submits all 5 ingestion jobs concurrently by
+default, each capped to 1 executor core/768MB (`--total-executor-cores 1
+--executor-memory 768m`) — the 2-worker cluster advertises 6 core slots total
+(`SPARK_WORKER_CORES=3` each), so all 5 fit with 1 slot to spare. Submission
+takes ~30-40s for all 5 to register, since their driver JVMs contend for
+`spark-master`'s own `cpus: 0.5` quota on startup — this is expected, not a hang.
+Driver output goes to `logs/submit-spark-jobs/`; check a job is alive via the
+[Spark Master UI](http://localhost:8080) or `docker exec spark-master ps aux | grep SparkSubmit`.
+To stop a job, kill its driver process (`docker exec spark-master pkill -f ingest_weather.py`, etc.) —
+stopping/restarting the containers also stops it, since the driver JVM runs inside `spark-master`.
+See [TODO.md](TODO.md) for a known issue that can affect `ingest_logistics.py`.
+
+### 3. Start MQTT Generators (new terminal)
 ```bash
 source .venv/bin/activate    
 cd mqtt-generators
@@ -49,7 +71,7 @@ python mqtt-generators/main.py
 ```  
 Note: the generators should now be visible as clients in the EMQX dashboards.    
 
-### 3. Check EMQX logs for Kafka bridge:
+### 4. Check EMQX logs for Kafka bridge:
 ```bash
 docker logs emqx 2>&1 | grep -i "kafka\|bridge" | head -20
 # API calls
@@ -57,14 +79,14 @@ docker logs emqx 2>&1 | grep -i "kafka\|bridge" | head -20
 # curl -s -u <EMQX_API_KEY>:<EMQX_API_SECRET> http://localhost:18083/api/v5/rules
 ```
 
-### 4. Verify Kafka is receiving messages:
+### 5. Verify Kafka is receiving messages:
 ```bash
 docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 \
   --topic iot-weather-data --from-beginning --max-messages 5 --timeout-ms 5000
 # Check kafka-ui on localhost:8888
 ```
 
-### 5. Monitor live MQTT messages:
+### 6. Monitor live MQTT messages:
 
 The `emqx` image has no `mosquitto_sub`/`mosquitto_pub` binaries — install
 `mosquitto-clients` on the host instead (`sudo apt install mosquitto-clients`),
@@ -76,25 +98,6 @@ mosquitto_sub -h localhost -t "devices/weather/+" -v
 # In another terminal, publish test message
 mosquitto_pub -h localhost -t "devices/weather/test" -m '{"test":"data","timestamp":1234567890000}'
 ```
-
-### 6. Submit Spark Jobs (another terminal)
-```bash
-bash scripts/submit-spark-jobs.sh
-```
-Note: these are Spark **Structured Streaming** jobs, not one-off batch jobs — each
-one starts, then runs forever in the background, continuously picking up new
-Kafka messages as they arrive (`query.awaitTermination()` never returns on its
-own). `submit-spark-jobs.sh` submits all 5 ingestion jobs concurrently by
-default, each capped to 1 executor core/768MB (`--total-executor-cores 1
---executor-memory 768m`) — the 2-worker cluster advertises 6 core slots total
-(`SPARK_WORKER_CORES=3` each), so all 5 fit with 1 slot to spare. Submission
-takes ~30-40s for all 5 to register, since their driver JVMs contend for
-`spark-master`'s own `cpus: 0.5` quota on startup — this is expected, not a hang.
-Driver output goes to `logs/submit-spark-jobs/`; check a job is alive via the
-[Spark Master UI](http://localhost:8080) or `docker exec spark-master ps aux | grep SparkSubmit`.
-To stop a job, kill its driver process (`docker exec spark-master pkill -f ingest_weather.py`, etc.) —
-stopping/restarting the containers also stops it, since the driver JVM runs inside `spark-master`.
-See [TODO.md](TODO.md) for a known issue that can affect `ingest_logistics.py`.
 
 ### 7. View Results & Dashboards
 ```bash

@@ -127,6 +127,7 @@ services:
     ports:
       - "7077:7077"
       - "8080:8080"
+      - "4040-4044:4040-4044"   # Application UI (Jobs/Stages/Storage/Environment/Executors) - one port per concurrent driver in this container (submit-spark-jobs.sh runs up to 5)
     environment:
       - SPARK_NO_DAEMONIZE=true
       - SPARK_PUBLIC_DNS=localhost

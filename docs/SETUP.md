@@ -56,35 +56,17 @@ python3 monitoring/health_check.py
 ```
 
 
-### Step 3: Start MQTT Generators (in new terminal)
-```bash
-source .venv/bin/activate    
-cd mqtt-generators
-python mqtt-generators/main.py
-```
-
-Expected output:
-```
-=== Starting Generator Orchestrator ===
-Duration: 30 minutes
-Batch Frequency: 60 seconds
-Target Throughput: 500 msg/sec
-
-Connecting All Generators...
-✓ All generators connected!
-
-[Batch 1] Published: 600 | Total: 600 | Throughput: 10.0 msg/sec | Cycle Time: 0.45s
-[Batch 2] Published: 590 | Total: 1190 | Throughput: 9.8 msg/sec | Cycle Time: 0.48s
-...
-```
-
-### Step 4: Submit Spark Jobs (in another terminal)
+### Step 3: Submit Spark Jobs (in new terminal)
 
 > **These are Spark Structured Streaming jobs, not batch jobs.** Each one, once
 > submitted, keeps running forever - continuously reading new Kafka messages
 > and writing them to PostgreSQL - until you explicitly stop it or stop the
 > containers. There is nothing to "wait for it to finish"; a healthy job simply
 > never exits on its own.
+
+Submit these **before** starting the generators: each job uses
+`startingOffsets=latest`, so it only sees messages published after it started -
+starting it first means no messages get missed once the generators kick in.
 
 ```bash
 # Go to project root
@@ -119,6 +101,28 @@ docker exec spark-master ps aux | grep SparkSubmit
 To stop a specific job:
 ```bash
 docker exec spark-master pkill -f ingest_weather.py
+```
+
+### Step 4: Start MQTT Generators (in another terminal)
+```bash
+source .venv/bin/activate    
+cd mqtt-generators
+python mqtt-generators/main.py
+```
+
+Expected output:
+```
+=== Starting Generator Orchestrator ===
+Duration: 30 minutes
+Batch Frequency: 60 seconds
+Target Throughput: 500 msg/sec
+
+Connecting All Generators...
+✓ All generators connected!
+
+[Batch 1] Published: 600 | Total: 600 | Throughput: 10.0 msg/sec | Cycle Time: 0.45s
+[Batch 2] Published: 590 | Total: 1190 | Throughput: 9.8 msg/sec | Cycle Time: 0.48s
+...
 ```
 
 ### Step 5: Verify Data Flow (1 min)
