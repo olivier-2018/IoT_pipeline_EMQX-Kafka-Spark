@@ -3,6 +3,8 @@
 
 import logging
 import json
+import psycopg2
+from psycopg2.extras import execute_values
 from pyspark.sql.functions import col, from_json, current_timestamp, to_timestamp
 
 from shared_utils import (
@@ -41,6 +43,7 @@ def main():
             .withColumn("recorded_at", to_timestamp(col("timestamp") / 1000))
             .withColumn("ingested_at", current_timestamp())
             .select(
+                col("message_id"),
                 col("device_id"),
                 col("temperature"),
                 col("humidity"),
@@ -49,6 +52,35 @@ def main():
                 col("ingested_at")
             )
         )
+
+        # Write each partition directly via psycopg2 with ON CONFLICT DO NOTHING,
+        # keyed on the generator-issued message_id, so replaying an
+        # already-partially-written micro-batch (checkpoint restart, or a
+        # retried task within the same batch) skips rows that already made it
+        # into Postgres instead of inserting silent duplicates.
+        def write_partition(rows):
+            rows = list(rows)
+            if not rows:
+                return
+            conn = psycopg2.connect(**SparkSessionFactory.get_psycopg2_dsn())
+            try:
+                with conn, conn.cursor() as cur:
+                    execute_values(
+                        cur,
+                        """
+                        INSERT INTO iot.weather_data
+                            (message_id, device_id, temperature, humidity, pressure, recorded_at, ingested_at)
+                        VALUES %s
+                        ON CONFLICT (message_id) DO NOTHING
+                        """,
+                        [
+                            (r.message_id, r.device_id, r.temperature, r.humidity,
+                             r.pressure, r.recorded_at, r.ingested_at)
+                            for r in rows
+                        ],
+                    )
+            finally:
+                conn.close()
 
         # Write to PostgreSQL in micro-batches
         def write_to_postgres(batch_df, batch_id):
@@ -59,18 +91,11 @@ def main():
                 return
 
             DataValidator.validate_required_fields(
-                batch_df, ["device_id", "temperature", "humidity", "pressure"]
+                batch_df, ["message_id", "device_id", "temperature", "humidity", "pressure"]
             )
 
-            jdbc_options = SparkSessionFactory.get_jdbc_options("weather_data")
-
             try:
-                batch_df.write \
-                    .format("jdbc") \
-                    .options(**jdbc_options) \
-                    .mode("append") \
-                    .save()
-
+                batch_df.foreachPartition(write_partition)
                 logger.info(f"[Batch {batch_id}] ✓ Wrote {count} weather records to PostgreSQL")
             except Exception as e:
                 logger.error(f"[Batch {batch_id}] Error writing to PostgreSQL: {e}")

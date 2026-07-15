@@ -9,6 +9,7 @@ SET search_path TO iot;
 -- Stores temperature, humidity, and other weather metrics
 CREATE TABLE IF NOT EXISTS weather_data (
     id SERIAL PRIMARY KEY,
+    message_id UUID UNIQUE,  -- generator-issued id; lets writes upsert idempotently (ON CONFLICT)
     device_id VARCHAR(50) NOT NULL,
     temperature DECIMAL(5,2),
     humidity DECIMAL(5,2),
@@ -67,6 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_logistics_ingested
 -- Records inventory stock changes per SKU
 CREATE TABLE IF NOT EXISTS inventory_changes (
     id SERIAL PRIMARY KEY,
+    message_id UUID UNIQUE,  -- generator-issued id; lets writes upsert idempotently (ON CONFLICT)
     item_sku VARCHAR(50) NOT NULL,
     warehouse_id VARCHAR(50),
     quantity_delta INT NOT NULL,
@@ -87,6 +89,7 @@ CREATE INDEX IF NOT EXISTS idx_inventory_ingested
 -- Logs user activity events (clicks, page views, add-to-cart, etc.)
 CREATE TABLE IF NOT EXISTS user_events (
     id SERIAL PRIMARY KEY,
+    message_id UUID UNIQUE,  -- generator-issued id; lets writes upsert idempotently (ON CONFLICT)
     user_id INT NOT NULL,
     event_type VARCHAR(50) NOT NULL,
     event_action VARCHAR(100),

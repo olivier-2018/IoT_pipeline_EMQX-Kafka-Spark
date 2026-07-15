@@ -2,6 +2,8 @@
 # Reads from iot-orders-events Kafka topic, validates, transforms, writes to PostgreSQL
 
 import logging
+import psycopg2
+from psycopg2.extras import execute_values
 from pyspark.sql.functions import col, from_json, current_timestamp, to_timestamp, explode, size
 
 from shared_utils import (
@@ -53,6 +55,36 @@ def main():
             )
         )
 
+        # Write each partition directly via psycopg2 with ON CONFLICT DO NOTHING,
+        # so replaying an already-partially-written micro-batch (checkpoint
+        # restart, or a retried task within the same batch) skips rows that
+        # already made it into Postgres instead of crashing on a duplicate key.
+        # Spark's JDBC DataFrameWriter has no upsert mode, hence the raw SQL here.
+        def write_partition(rows):
+            rows = list(rows)
+            if not rows:
+                return
+            conn = psycopg2.connect(**SparkSessionFactory.get_psycopg2_dsn())
+            try:
+                with conn, conn.cursor() as cur:
+                    execute_values(
+                        cur,
+                        """
+                        INSERT INTO iot.sales_orders
+                            (order_id, customer_id, order_status, total_amount,
+                             item_count, created_at, updated_at, ingested_at)
+                        VALUES %s
+                        ON CONFLICT (order_id) DO NOTHING
+                        """,
+                        [
+                            (r.order_id, r.customer_id, r.order_status, r.total_amount,
+                             r.item_count, r.created_at, r.updated_at, r.ingested_at)
+                            for r in rows
+                        ],
+                    )
+            finally:
+                conn.close()
+
         # Write to PostgreSQL in micro-batches
         def write_to_postgres(batch_df, batch_id):
             """Write batch to PostgreSQL"""
@@ -65,15 +97,8 @@ def main():
                 batch_df, ["order_id", "customer_id", "order_status", "total_amount"]
             )
 
-            jdbc_options = SparkSessionFactory.get_jdbc_options("sales_orders")
-
             try:
-                batch_df.write \
-                    .format("jdbc") \
-                    .options(**jdbc_options) \
-                    .mode("append") \
-                    .save()
-
+                batch_df.foreachPartition(write_partition)
                 logger.info(f"[Batch {batch_id}] ✓ Wrote {count} order records to PostgreSQL")
             except Exception as e:
                 logger.error(f"[Batch {batch_id}] Error writing to PostgreSQL: {e}")

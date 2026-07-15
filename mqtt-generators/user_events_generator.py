@@ -67,6 +67,7 @@ class UserEventsGenerator:
             self.active_sessions[user_id] = str(uuid.uuid4())
         
         return {
+            "message_id": str(uuid.uuid4()),
             "user_id": user_id,
             "event_type": random.choice(self.ranges["actions"]),
             "page": random.choice(self.ranges["pages"]),

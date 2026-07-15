@@ -10,6 +10,11 @@ RUN apt-get update && apt-get install -y \
     zip \
     && rm -rf /var/lib/apt/lists/*
 
+# psycopg2-binary lets ingest jobs issue raw SQL (INSERT ... ON CONFLICT) for
+# idempotent writes - Spark's built-in JDBC writer has no upsert mode. Using
+# the -binary package (bundles libpq) avoids needing libpq-dev/gcc at build time.
+RUN pip3 install psycopg2-binary
+
 # Bake in the Kafka connector (structured streaming) and PostgreSQL JDBC driver so
 # spark-submit never needs network access to Maven Central at job-submit time.
 # Each jar is verified against its official Maven Central sha1 checksum, failing the

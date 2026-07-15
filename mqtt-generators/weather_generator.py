@@ -4,6 +4,7 @@
 import json
 import random
 import logging
+import uuid
 from datetime import datetime
 import paho.mqtt.client as mqtt
 from config import MQTT_CONFIG, DEVICE_CONFIG, DATA_RANGES, LOG_FORMAT
@@ -53,6 +54,7 @@ class WeatherGenerator:
     def generate_record(self, device_id: str) -> dict:
         """Generate a single weather record"""
         return {
+            "message_id": str(uuid.uuid4()),
             "device_id": device_id,
             "temperature": round(random.uniform(*self.ranges["temperature"]), 2),
             "humidity": random.randint(*self.ranges["humidity"]),

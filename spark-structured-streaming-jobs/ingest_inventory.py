@@ -2,6 +2,8 @@
 # Reads from iot-inventory-changes Kafka topic, aggregates per SKU, writes to PostgreSQL
 
 import logging
+import psycopg2
+from psycopg2.extras import execute_values
 from pyspark.sql.functions import col, from_json, current_timestamp, to_timestamp
 
 from shared_utils import (
@@ -40,6 +42,7 @@ def main():
             .withColumn("changed_at", to_timestamp(col("timestamp") / 1000))
             .withColumn("ingested_at", current_timestamp())
             .select(
+                col("message_id"),
                 col("item_sku"),
                 col("warehouse_id"),
                 col("quantity_delta"),
@@ -48,6 +51,35 @@ def main():
                 col("ingested_at")
             )
         )
+
+        # Write each partition directly via psycopg2 with ON CONFLICT DO NOTHING,
+        # keyed on the generator-issued message_id, so replaying an
+        # already-partially-written micro-batch (checkpoint restart, or a
+        # retried task within the same batch) skips rows that already made it
+        # into Postgres instead of inserting silent duplicates.
+        def write_partition(rows):
+            rows = list(rows)
+            if not rows:
+                return
+            conn = psycopg2.connect(**SparkSessionFactory.get_psycopg2_dsn())
+            try:
+                with conn, conn.cursor() as cur:
+                    execute_values(
+                        cur,
+                        """
+                        INSERT INTO iot.inventory_changes
+                            (message_id, item_sku, warehouse_id, quantity_delta, change_reason, changed_at, ingested_at)
+                        VALUES %s
+                        ON CONFLICT (message_id) DO NOTHING
+                        """,
+                        [
+                            (r.message_id, r.item_sku, r.warehouse_id, r.quantity_delta,
+                             r.change_reason, r.changed_at, r.ingested_at)
+                            for r in rows
+                        ],
+                    )
+            finally:
+                conn.close()
 
         # Write to PostgreSQL in micro-batches
         def write_to_postgres(batch_df, batch_id):
@@ -58,18 +90,11 @@ def main():
                 return
 
             DataValidator.validate_required_fields(
-                batch_df, ["item_sku", "warehouse_id", "quantity_delta"]
+                batch_df, ["message_id", "item_sku", "warehouse_id", "quantity_delta"]
             )
 
-            jdbc_options = SparkSessionFactory.get_jdbc_options("inventory_changes")
-
             try:
-                batch_df.write \
-                    .format("jdbc") \
-                    .options(**jdbc_options) \
-                    .mode("append") \
-                    .save()
-
+                batch_df.foreachPartition(write_partition)
                 logger.info(f"[Batch {batch_id}] ✓ Wrote {count} inventory records to PostgreSQL")
             except Exception as e:
                 logger.error(f"[Batch {batch_id}] Error writing to PostgreSQL: {e}")

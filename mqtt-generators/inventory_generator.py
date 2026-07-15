@@ -4,6 +4,7 @@
 import json
 import random
 import logging
+import uuid
 from datetime import datetime
 import paho.mqtt.client as mqtt
 from config import MQTT_CONFIG, DEVICE_CONFIG, DATA_RANGES, LOG_FORMAT
@@ -58,6 +59,7 @@ class InventoryGenerator:
     def generate_record(self) -> dict:
         """Generate a single inventory change record"""
         return {
+            "message_id": str(uuid.uuid4()),
             "item_sku": random.choice(self.sample_skus),
             "warehouse_id": random.choice(self.ranges["warehouse_ids"]),
             "quantity_delta": random.randint(*self.ranges["qty_delta_range"]),

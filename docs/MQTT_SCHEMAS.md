@@ -16,6 +16,7 @@ This document provides detailed JSON schema definitions for all MQTT messages in
 
 ```json
 {
+  "message_id": "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5",
   "device_id": "weather-sensor-01",
   "temperature": 23.5,
   "humidity": 65,
@@ -28,6 +29,7 @@ This document provides detailed JSON schema definitions for all MQTT messages in
 
 | Field | Type | Range | Required | Description |
 |-------|------|-------|----------|-------------|
+| `message_id` | string (UUID) | - | ✓ | Unique message identifier, generated at publish time - lets Spark upsert idempotently (`ON CONFLICT DO NOTHING`) instead of risking duplicate rows on a replay |
 | `device_id` | string | `weather-sensor-01` to `weather-sensor-10` | ✓ | Unique sensor identifier |
 | `temperature` | float | 15.0–35.0 °C | ✓ | Ambient temperature in Celsius |
 | `humidity` | integer | 30–80 % | ✓ | Relative humidity percentage |
@@ -38,7 +40,7 @@ This document provides detailed JSON schema definitions for all MQTT messages in
 
 ```bash
 mosquitto_pub -h localhost -t "devices/weather/data" \
-  -m '{"device_id":"weather-sensor-01","temperature":23.5,"humidity":65,"pressure":1013.25,"timestamp":1688044200000}'
+  -m '{"message_id":"a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5","device_id":"weather-sensor-01","temperature":23.5,"humidity":65,"pressure":1013.25,"timestamp":1688044200000}'
 ```
 
 ---
@@ -172,6 +174,7 @@ mosquitto_pub -h localhost -t "devices/logistics/dispatch" \
 
 ```json
 {
+  "message_id": "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6",
   "item_sku": "SKU-003",
   "warehouse_id": "WH2",
   "quantity_delta": 50,
@@ -184,6 +187,7 @@ mosquitto_pub -h localhost -t "devices/logistics/dispatch" \
 
 | Field | Type | Range | Required | Description |
 |-------|------|-------|----------|-------------|
+| `message_id` | string (UUID) | - | ✓ | Unique message identifier, generated at publish time - lets Spark upsert idempotently (`ON CONFLICT DO NOTHING`) instead of risking duplicate rows on a replay |
 | `item_sku` | string | `SKU-001` to `SKU-010` | ✓ | Stock keeping unit identifier |
 | `warehouse_id` | string | `WH1`, `WH2`, `WH3`, `WH4` | ✓ | Warehouse location code |
 | `quantity_delta` | integer | -50 to +50 | ✓ | Change in stock (+ restock, - sale/loss) |
@@ -202,7 +206,7 @@ mosquitto_pub -h localhost -t "devices/logistics/dispatch" \
 
 ```bash
 mosquitto_pub -h localhost -t "devices/inventory/change" \
-  -m '{"item_sku":"SKU-003","warehouse_id":"WH2","quantity_delta":50,"change_reason":"restock","timestamp":1688044200000}'
+  -m '{"message_id":"b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6","item_sku":"SKU-003","warehouse_id":"WH2","quantity_delta":50,"change_reason":"restock","timestamp":1688044200000}'
 ```
 
 ---
@@ -220,6 +224,7 @@ mosquitto_pub -h localhost -t "devices/inventory/change" \
 
 ```json
 {
+  "message_id": "c3d4e5f6-a7b8-4c9d-0e1f-a2b3c4d5e6f7",
   "user_id": 5234,
   "event_type": "click",
   "page": "products",
@@ -233,6 +238,7 @@ mosquitto_pub -h localhost -t "devices/inventory/change" \
 
 | Field | Type | Range | Required | Description |
 |-------|------|-------|----------|-------------|
+| `message_id` | string (UUID) | - | ✓ | Unique message identifier, generated at publish time - lets Spark upsert idempotently (`ON CONFLICT DO NOTHING`) instead of risking duplicate rows on a replay |
 | `user_id` | integer | 1–10000 | ✓ | Unique user identifier |
 | `event_type` | string | see event types | ✓ | Type of user action |
 | `page` | string | see pages | ✓ | Page or view where event occurred |
@@ -262,7 +268,7 @@ mosquitto_pub -h localhost -t "devices/inventory/change" \
 
 ```bash
 mosquitto_pub -h localhost -t "devices/users/event" \
-  -m '{"user_id":5234,"event_type":"click","page":"products","session_id":"sess-a7b8c9d0-e1f2-4g3h-i4j5-k6l7m8n9o0p1","event_value":"42","timestamp":1688044200000}'
+  -m '{"message_id":"c3d4e5f6-a7b8-4c9d-0e1f-a2b3c4d5e6f7","user_id":5234,"event_type":"click","page":"products","session_id":"sess-a7b8c9d0-e1f2-4g3h-i4j5-k6l7m8n9o0p1","event_value":"42","timestamp":1688044200000}'
 ```
 
 ---

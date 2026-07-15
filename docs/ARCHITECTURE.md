@@ -99,7 +99,8 @@ This is a minimalist end-to-end IoT data pipeline designed to run on a **12GB la
 │      soon as the previous one finishes and new data is available │
 │    • Validates schema and data ranges                            │
 │    • Transforms/enriches data                                    │
-│    • Writes each micro-batch to PostgreSQL via foreachBatch       │
+│    • Writes each micro-batch via foreachBatch -> foreachPartition, │
+│      idempotent upsert (INSERT ... ON CONFLICT DO NOTHING/UPDATE) │
 │    • Progress (Kafka offsets) is tracked in a checkpoint          │
 │      directory, not in Kafka consumer groups                     │
 └──────────────────────────────────────────────────────────────────┘
@@ -220,7 +221,7 @@ writes them to PostgreSQL, one micro-batch at a time, for as long as the
 process stays alive (until you kill it or the container stops).
 - ✅ Continuous, low-latency ingestion — no need to re-trigger a batch job on a schedule
 - ✅ Exactly-once-ish offset tracking via Spark's own checkpoint directory (not Kafka consumer-group commits)
-- ✅ Native PostgreSQL JDBC integration via `foreachBatch` (no custom sinks)
+- ✅ Idempotent Postgres writes: `foreachBatch` calls `foreachPartition`, which opens a raw `psycopg2` connection per partition and issues `INSERT ... ON CONFLICT (<unique key>) DO NOTHING` (4 tables) or `DO UPDATE` (`logistics_shipments`, where the same key legitimately recurs as tracking updates rather than replay duplicates) - see [TODO.md](../TODO.md) for how each table's key and conflict strategy were chosen
 - ✅ Automatically resumes from the last committed checkpoint offset after a restart (as long as the checkpoint directory persists — see [Known Limitations](#known-limitations))
 - ⚠️ "Micro-batch" here refers to Structured Streaming's internal execution unit, not a scheduled batch job — there's no fixed interval; the next micro-batch starts as soon as the previous one finishes and new data exists
 - ⚠️ A job with no data arriving (generators stopped) just idles — this is normal, not a hang
@@ -394,7 +395,6 @@ docker exec kafka kafka-console-consumer --bootstrap-server kafka:9092 \
 4. **Fail-fast PostgreSQL writes**: a JDBC write error in any `foreachBatch` call now crashes that job's streaming query (it re-raises rather than swallowing the exception) instead of silently dropping the batch - correct for not losing data unnoticed, but means an operator has to notice the job died and resubmit it; no dead-letter queue or automatic retry
 5. **No Authentication**: EMQX/Kafka/Postgres all open (demo only)
 6. **Single PostgreSQL**: No failover; node loss = data unavailable
-7. **JDBC writes are not idempotent against retry/replay**: combined with limitation 4, a partially-failed micro-batch can leave some rows already committed to Postgres, then collide with themselves as duplicate-key errors when the checkpoint replays that batch (on restart) or Spark retries a task within it. Tables with a natural-key primary key (`sales_orders`, `logistics_shipments`) crash loudly on this; `weather_data`/`inventory_changes`/`user_events` have no such constraint and would insert silent duplicates instead. See [TODO.md](../TODO.md) for a concrete reproduction and the proposed upsert-based fix.
 
 ---
 

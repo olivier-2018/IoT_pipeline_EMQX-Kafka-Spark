@@ -79,6 +79,24 @@ class SparkSessionFactory:
             "stringtype": "unspecified",
         }
 
+    @staticmethod
+    def get_psycopg2_dsn(username: str = "postgres", password: str = "iot_demo_pass",
+                         host: str = "postgres", port: int = 5432,
+                         database: str = "iot_database", schema: str = "iot") -> dict:
+        """
+        Connection kwargs for a raw psycopg2 connection (as opposed to Spark's
+        JDBC DataFrameWriter, which has no upsert/ON CONFLICT support). Used by
+        foreachPartition-based writes that need idempotent inserts.
+        """
+        return {
+            "host": host,
+            "port": port,
+            "dbname": database,
+            "user": username,
+            "password": password,
+            "options": f"-c search_path={schema}",
+        }
+
 
 class SchemaRegistry:
     """Registry of DataFrame schemas for all data types"""
@@ -87,6 +105,7 @@ class SchemaRegistry:
     def get_weather_schema() -> StructType:
         """Schema for weather data from Kafka"""
         return StructType([
+            StructField("message_id", StringType(), True),
             StructField("device_id", StringType(), True),
             StructField("temperature", DoubleType(), True),
             StructField("humidity", IntegerType(), True),
@@ -130,6 +149,7 @@ class SchemaRegistry:
     def get_inventory_schema() -> StructType:
         """Schema for inventory changes from Kafka"""
         return StructType([
+            StructField("message_id", StringType(), True),
             StructField("item_sku", StringType(), True),
             StructField("warehouse_id", StringType(), True),
             StructField("quantity_delta", IntegerType(), True),
@@ -141,6 +161,7 @@ class SchemaRegistry:
     def get_user_events_schema() -> StructType:
         """Schema for user events from Kafka"""
         return StructType([
+            StructField("message_id", StringType(), True),
             StructField("user_id", IntegerType(), True),
             StructField("event_type", StringType(), True),
             StructField("page", StringType(), True),

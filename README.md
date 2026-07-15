@@ -61,7 +61,9 @@ Driver output goes to `logs/submit-spark-jobs/`; check a job is alive via the
 [Spark Master UI](http://localhost:8080) or `docker exec spark-master ps aux | grep SparkSubmit`.
 To stop a job, kill its driver process (`docker exec spark-master pkill -f ingest_weather.py`, etc.) —
 stopping/restarting the containers also stops it, since the driver JVM runs inside `spark-master`.
-See [TODO.md](TODO.md) for a known issue that can affect `ingest_logistics.py`.
+All 5 jobs write via idempotent upserts (`ON CONFLICT DO NOTHING` on a unique
+key, not Spark's plain JDBC writer) - see [TODO.md](TODO.md) for how each
+table's key was chosen and validated.
 
 ### 3. Start MQTT Generators (new terminal)
 ```bash
@@ -304,7 +306,6 @@ docker compose down && rm -rf ./data/*
 - ⚠️ No monitoring/alerting (can add Prometheus later)
 - ⚠️ No TLS/auth (demo-only setup)
 - ⚠️ PostgreSQL single node (no failover)
-- ⚠️ JDBC writes aren't idempotent against checkpoint replay/task retry — see [TODO.md](TODO.md) for details and current status
 
 ---
 

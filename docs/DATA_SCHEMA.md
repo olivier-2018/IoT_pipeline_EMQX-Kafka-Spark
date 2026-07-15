@@ -13,6 +13,7 @@ All tables are in the `iot` schema. Access via: `psql -d iot_database -c "SELECT
 ```sql
 CREATE TABLE iot.weather_data (
     id SERIAL PRIMARY KEY,
+    message_id UUID UNIQUE,             -- generator-issued id; lets Spark upsert idempotently
     device_id VARCHAR(50) NOT NULL,
     temperature DECIMAL(5,2),           -- Celsius, range: -50 to +60
     humidity DECIMAL(5,2),              -- Percentage, range: 0 to 100
@@ -163,6 +164,7 @@ ORDER BY last_update DESC;
 ```sql
 CREATE TABLE iot.inventory_changes (
     id SERIAL PRIMARY KEY,
+    message_id UUID UNIQUE,                     -- generator-issued id; lets Spark upsert idempotently
     item_sku VARCHAR(50) NOT NULL,              -- Product SKU (e.g., "WIDGET-001")
     warehouse_id VARCHAR(50),                   -- Warehouse code (e.g., "WH1", "WH2")
     quantity_delta INT NOT NULL,                -- Change amount (pos/neg)
@@ -212,6 +214,7 @@ ORDER BY current_stock ASC;
 ```sql
 CREATE TABLE iot.user_events (
     id SERIAL PRIMARY KEY,
+    message_id UUID UNIQUE,                     -- generator-issued id; lets Spark upsert idempotently
     user_id INT NOT NULL,
     event_type VARCHAR(50) NOT NULL,            -- click, view, add_to_cart, purchase, login, logout
     page_or_resource VARCHAR(200),              -- e.g., "/products", "/checkout"

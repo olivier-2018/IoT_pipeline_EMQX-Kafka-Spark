@@ -216,12 +216,22 @@ org.postgresql.util.PSQLException: ERROR: duplicate key value violates unique co
 suggested. That mode only applies when the target table doesn't exist yet
 (it means "if the table exists, do nothing at all" - i.e. it would silently
 skip writing the *entire* micro-batch, not just the conflicting row, since
-these tables already exist from `init.sql`). See [TODO.md](../TODO.md) for
-the full root cause (Spark's per-partition JDBC writes aren't atomic across a
-micro-batch, so a partial failure can leave some rows committed; on replay -
-whether from a checkpoint-triggered restart or a Spark task retry - those
-same rows collide) and the proposed real fix (`foreachPartition` + raw
-`INSERT ... ON CONFLICT`, or stage-then-merge).
+these tables already exist from `init.sql`).
+
+**Fixed** (2026-07-15) for all 5 jobs: each now uses `batch_df.foreachPartition(...)`
+with a raw `psycopg2` connection issuing `INSERT ... ON CONFLICT (<key>) DO NOTHING`
+(or `DO UPDATE` for `logistics_shipments`, where `shipment_id` legitimately
+recurs across tracking-update messages rather than only appearing on replay)
+instead of Spark's JDBC writer. `ingest_orders.py`/`ingest_logistics.py` key on
+their existing `order_id`/`shipment_id` UUIDs. `ingest_weather.py`/
+`ingest_inventory.py`/`ingest_user_events.py` had no natural-key column safe to
+upsert on (inventing one from existing columns was checked against the mock
+generators and rejected - see [TODO.md](../TODO.md) for why), so the mock
+generators now emit a `message_id` UUID per message instead, and the 3 tables
+gained a `message_id UUID UNIQUE` column. Validated against a real
+reproduction for `logistics` (a checkpoint stuck replaying the same colliding
+batch indefinitely now clears through cleanly) and confirmed `message_id`
+populating correctly for the other 3.
 
 ---
 
