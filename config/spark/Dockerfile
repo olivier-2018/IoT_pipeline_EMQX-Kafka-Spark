@@ -1,4 +1,5 @@
-# Spark with Kafka connector + PostgreSQL JDBC driver baked in for PySpark jobs
+# Spark with Kafka connector baked in for PySpark jobs (Postgres access is via
+# psycopg2, not JDBC - see the pip install below)
 FROM apache/spark:3.5.0
 
 USER root
@@ -15,8 +16,8 @@ RUN apt-get update && apt-get install -y \
 # the -binary package (bundles libpq) avoids needing libpq-dev/gcc at build time.
 RUN pip3 install psycopg2-binary
 
-# Bake in the Kafka connector (structured streaming) and PostgreSQL JDBC driver so
-# spark-submit never needs network access to Maven Central at job-submit time.
+# Bake in the Kafka connector (structured streaming) so spark-submit never needs
+# network access to Maven Central at job-submit time.
 # Each jar is verified against its official Maven Central sha1 checksum, failing the
 # build on any mismatch.
 RUN set -eu; \
@@ -33,7 +34,6 @@ RUN set -eu; \
     fetch_jar org/apache/spark spark-token-provider-kafka-0-10_2.12 3.5.0; \
     fetch_jar org/apache/kafka kafka-clients 3.4.1; \
     fetch_jar org/apache/commons commons-pool2 2.11.1; \
-    fetch_jar org/postgresql postgresql 42.6.0; \
     chown spark:spark /opt/spark/jars/*.jar
 
 USER spark

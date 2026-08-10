@@ -47,39 +47,6 @@ class SparkSessionFactory:
         return spark
 
     @staticmethod
-    def create_jdbc_url(host: str = "postgres", port: int = 5432, 
-                        database: str = "iot_database", schema: str = "iot") -> str:
-        """Create JDBC URL for PostgreSQL connection"""
-        return f"jdbc:postgresql://{host}:{port}/{database}?currentSchema={schema}"
-
-    @staticmethod
-    def get_jdbc_options(table: str, username: str = "postgres", 
-                        password: str = "iot_demo_pass", 
-                        host: str = "postgres", port: int = 5432,
-                        database: str = "iot_database", schema: str = "iot") -> dict:
-        """Get JDBC options dictionary for DataFrame read/write"""
-        return {
-            "url": SparkSessionFactory.create_jdbc_url(host, port, database, schema),
-            "dbtable": f"{schema}.{table}",
-            "user": username,
-            "password": password,
-            "driver": "org.postgresql.Driver",
-            "fetchsize": "10000",
-            "batchsize": "1000",
-            "numPartitions": "4",
-            "maxNumPartitions": "8",
-            "isolationLevel": "READ_UNCOMMITTED",
-            # Spark has no native UUID type, so order_id/shipment_id are written as
-            # StringType. Without this, the Postgres JDBC driver binds them as an
-            # explicit varchar parameter and the server rejects the implicit cast to
-            # the uuid columns (sales_orders.order_id, logistics_shipments.shipment_id/
-            # order_id) with "column is of type uuid but expression is of type character
-            # varying". This tells the driver to leave the parameter type unspecified
-            # so Postgres infers it from the target column instead.
-            "stringtype": "unspecified",
-        }
-
-    @staticmethod
     def get_psycopg2_dsn(username: str = "postgres", password: str = "iot_demo_pass",
                          host: str = "postgres", port: int = 5432,
                          database: str = "iot_database", schema: str = "iot") -> dict:
