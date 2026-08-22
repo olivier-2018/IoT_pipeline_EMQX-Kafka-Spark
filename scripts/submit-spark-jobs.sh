@@ -59,28 +59,51 @@ jobs=(
     "ingest_user_events.py"
 )
 
+# Per-job --total-executor-cores. Each Kafka topic has 2 partitions, so 2 cores
+# lets a job process both partitions of a micro-batch in true parallel instead
+# of serially - given to the two busiest topics only (user_events 200-500
+# msg/min, orders 50-100 msg/min). The other 3 stay at 1 core: with
+# SPARK_WORKER_CORES=3 x 2 workers = 6 slots total, uniformly giving every job
+# 2 cores would need 10 slots and starve whichever job submits last (Spark
+# Standalone doesn't preempt or top up a running app's allocation), so this is
+# a deliberate cap, not a uniform bump. 2+2+1+1+1 = 7 of 8 slots if
+# SPARK_WORKER_CORES is ever raised to 4/worker; against the current 3/worker
+# (6 slots) it's 7 of 6 - i.e. not all 5 can run at their target core count
+# simultaneously without raising SPARK_WORKER_CORES (whichever job submits
+# last when capacity runs out gets fewer cores than requested, not zero -
+# Standalone grants what's free at submit time, not an all-or-nothing block).
+declare -A JOB_CORES=(
+    ["ingest_weather.py"]=1
+    ["ingest_orders.py"]=2
+    ["ingest_logistics.py"]=1
+    ["ingest_inventory.py"]=1
+    ["ingest_user_events.py"]=2
+)
+
 for job in "${jobs[@]}"; do
     job_name="${job%.py}"
     log_file="$LOG_DIR/${RUN_TIMESTAMP}_${job_name}.log"
+    cores="${JOB_CORES[$job]}"
 
     echo ""
-    echo "Submitting: $job"
+    echo "Submitting: $job (--total-executor-cores $cores)"
     echo "  Log: $log_file"
 
     # --driver-memory is set explicitly (Spark's 1g default) since the driver JVM
     # runs inside spark-master's container (client deploy mode) alongside the
     # Master daemon; 512m stays within spark-master's mem_limit with headroom.
-    # --total-executor-cores 1 and --executor-memory 768m cap each job's
-    # footprint so multiple concurrent streaming jobs don't starve each other:
-    # Spark's 1g executor-memory default would fill an entire worker's
-    # advertised memory with a single executor, blocking every other app
-    # regardless of free cores (2 workers x SPARK_WORKER_MEMORY=2500m fits
-    # ~3 executors@768m each, well above Spark's ~450MB executor-memory floor).
+    # --executor-memory 768m caps each executor's footprint so multiple
+    # concurrent streaming jobs don't starve each other: Spark's 1g default
+    # would let a single executor consume most of a worker's advertised
+    # memory, blocking every other app regardless of free cores. Note a
+    # 2-core request typically launches as 2 separate 1-core executors
+    # (Standalone's spreadOut spreads across workers by default), so it costs
+    # 2 x 768m of worker memory, not 768m.
     docker exec spark-master /opt/spark/bin/spark-submit \
         --master "$SPARK_MASTER" \
         --deploy-mode client \
         --driver-memory 512m \
-        --total-executor-cores 1 \
+        --total-executor-cores "$cores" \
         --executor-memory 768m \
         --py-files "$SHARED_UTILS_ZIP" \
         "$CONTAINER_JOBS_DIR/$job" > "$log_file" 2>&1 &

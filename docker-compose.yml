@@ -113,7 +113,10 @@ services:
       - iot-network
     mem_limit: 512m
     memswap_limit: 512m
-    cpus: '0.5'
+    # Trimmed from 0.5 to make room for the Spark worker cpus bump below - a
+    # dev-facing dashboard, not load-bearing for the pipeline, so it's the
+    # safer trim target vs. Zookeeper (which affects Kafka broker stability).
+    cpus: '0.25'
 
   # Spark Master
   # Orchestrates Spark jobs submitted by Spark workers
@@ -162,7 +165,7 @@ services:
       - SPARK_PUBLIC_DNS=localhost
       # Without this, the Worker's default core count comes from the JVM's
       # cgroup-aware Runtime.availableProcessors(), which reads the `cpus:`
-      # quota below (1.0 -> 1 core) - too few to run 5 concurrent streaming
+      # quota below (2.0 -> 2 cores) - too few to run 5 concurrent streaming
       # jobs. These are I/O-bound (waiting on Kafka/Postgres), so more
       # scheduling slots than the CPU quota is fine.
       - SPARK_WORKER_CORES=3
@@ -182,7 +185,7 @@ services:
       - iot-network
     mem_limit: 3000m
     memswap_limit: 3000m
-    cpus: '1.0'
+    cpus: '2.0'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081"]
       interval: 10s
@@ -214,7 +217,7 @@ services:
       - iot-network
     mem_limit: 3000m
     memswap_limit: 3000m
-    cpus: '1.0'
+    cpus: '2.0'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082"]
       interval: 10s
